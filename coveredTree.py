@@ -1,5 +1,5 @@
 import numpy as np, random as rd
-
+import statistics as stats
 
 def randomBool(qVal):
     # choice = np.random.choice([0, 1], p=[qVal, 1 - qVal])
@@ -14,10 +14,10 @@ class CoveredGraph:
     #   1. each of the internal nodes which are not in the penultimate layer are simply sum variables
     #   AUTHOR COMMENT:
     #   Earlier we chose 'OR' for these variables, but in large networks, it almost always gives value 1 at the output.
-    #   2. all internal nodes (except the last) in the penultimate layer take value 1 with probability 0.5
+    #   2. all internal nodes (except the last) in the penultimate layer take value 1 with probability mu
     #   3. the last node in the penultimate layer takes value:
-    #       3a. 1 with probability 0.5 + epsilon if all its parents are set to 1.
-    #       3b. 1 with probability 0.5 otherwise.
+    #       3a. 1 with probability mu + epsilon if all its parents are set to 1.
+    #       3b. 1 with probability mu otherwise.
     #
     # The leaf nodes are boolean variables that take value 1 as per the q values
     #
@@ -33,7 +33,7 @@ class CoveredGraph:
         print("1. Create a new instance of the graph.")
         return super().__new__(cls)
 
-    def __init__(self, degree, numLayers, initialQValues=0.01, chosenEpsilon=0.3):
+    def __init__(self, degree, numLayers, initialQValues=0.01, mu=0.05, epsilon=0.1):
         print("2. Initialize the new instance of Point.")
         self.degree = degree  # number of edges per node.
         self.numLayers = numLayers  # Root node is considered layer 1. So a 2 layer tree has only leaves and root
@@ -42,13 +42,14 @@ class CoveredGraph:
         self.numLeaves = int(degree ** (numLayers))
         self.numInternal = self.numNodes - self.numLeaves
         self.numPenultimate = int(degree ** (numLayers - 1))
-        self.chosenEpsilon = chosenEpsilon
+        self.mu = mu
+        self.epsilon = epsilon
         self.leafQvals = np.ones(self.numLeaves) * initialQValues
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}(degree={self.degree}, numLayers={self.numLayers}, " \
                f"numNodes={self.numNodes}, numLeaves={self.numLeaves}, , numInternal={self.numInternal}" \
-               f"\nnumPenultimate={self.numPenultimate}, chosenEpsilon={self.chosenEpsilon}" \
+               f"\nnumPenultimate={self.numPenultimate}, mu={self.mu}, epsilon={self.epsilon}" \
                f"\nleafQvals={self.leafQvals})"
 
     def checkLeafIndex(self, k):
@@ -90,35 +91,79 @@ class CoveredGraph:
 
     def doNothing(self):
         sampledVals = np.zeros(self.numNodes)
-        for i in reversed(range(self.numNodes)):
-            if self.checkLeafIndex(i):
-                leafIndex = i-self.numInternal
+        for currentIndex in reversed(range(self.numNodes)):
+            if self.checkLeafIndex(currentIndex):
+                leafIndex = currentIndex-self.numInternal
                 qVal = self.leafQvals[leafIndex]
-                sampledVals[i] = randomBool(qVal)
-            if self.checkPenultimateLayer(i):
-                if self.checkChosenParentPenultimate(i):
-                    qVal = 0.5 + self.leafQvals[i]
-                    sampledVals[i] = randomBool(qVal)
+                sampledVals[currentIndex] = randomBool(qVal)
+            elif self.checkPenultimateLayer(currentIndex):
+                if self.checkChosenParentPenultimate(currentIndex):
+                    childIndices = self.getChildIndices(currentIndex)
+                    if sampledVals[childIndices].sum() == self.degree:
+                        qVal = self.mu + self.epsilon
+                    else:
+                        qVal = self.mu
+                    sampledVals[currentIndex] = randomBool(qVal)
                 else:
-                    qVal = 0.5
-                    sampledVals[i] = randomBool(qVal)
+                    qVal = self.mu
+                    sampledVals[currentIndex] = randomBool(qVal)
             else:
-                childIndices = self.getChildIndices(i)
+                childIndices = self.getChildIndices(currentIndex)
                 # sum = 0
                 # for j in childIndices:
                 #     sum += sampledVals[j]
                 # sampledVals[i] = sum
-                sampledVals[i] = sampledVals[childIndices].sum()
-
-
+                sampledVals[currentIndex] = (sampledVals[childIndices].sum() > 0)*1
         return sampledVals
 
+    def doOperation(self,intervenedIndices,intervenedValues):
+        for currentIndex in intervenedIndices:
+            if not self.checkLeafIndex(currentIndex):
+                raise Exception("Sorry, not a valid do() operation")
+        for value in intervenedValues:
+            if value not in [0,1]:
+                raise Exception("Sorry, not a valid do() operation")
+
+        sampledVals = np.zeros(self.numNodes)
+        for currentIndex in reversed(range(self.numNodes)):
+            if self.checkLeafIndex(currentIndex):
+                if currentIndex in intervenedIndices:
+                    currentIndexLocationInInterevenedArray = intervenedIndices.index(currentIndex)
+                    intervenedValue = intervenedValues[currentIndexLocationInInterevenedArray]
+                    sampledVals[currentIndex] = intervenedValue
+                else:
+                    leafIndex = currentIndex - self.numInternal
+                    qVal = self.leafQvals[leafIndex]
+                    sampledBoolean = randomBool(qVal)
+                    sampledVals[currentIndex] = sampledBoolean
+
+            elif self.checkPenultimateLayer(currentIndex):
+                if self.checkChosenParentPenultimate(currentIndex):
+                    childIndices = self.getChildIndices(currentIndex)
+                    if sampledVals[childIndices].sum()==self.degree:
+                        qVal = self.mu + self.epsilon
+                    else:
+                        qVal = self.mu
+                    sampledVals[currentIndex] = randomBool(qVal)
+                else:
+                    qVal = self.mu
+                    sampledVals[currentIndex] = randomBool(qVal)
+            else:
+                childIndices = self.getChildIndices(currentIndex)
+                # sum = 0
+                # for j in childIndices:
+                #     sum += sampledVals[j]
+                # sampledVals[i] = sum
+                sampledVals[currentIndex] = (sampledVals[childIndices].sum() > 0)*1
+        return sampledVals
 
 if __name__ == "__main__":
     np.random.seed(8)
+    np.set_printoptions(precision=3)
+    # np.set_printoptions(formatter={'float': '{: 0.3f}'.format})
     rd.seed(8)
     cgraph = CoveredGraph.__new__(CoveredGraph)
-    cgraph.__init__(degree=3, numLayers=4, initialQValues=0.0)
+    cgraph.__init__(degree=3, numLayers=4, initialQValues=0.0,mu=0.05,epsilon=0.05)
     print("cgraph=", cgraph)
     print("cgraph.numNodes=", cgraph.numNodes)
     for i in range(cgraph.numNodes):
@@ -126,7 +171,18 @@ if __name__ == "__main__":
 
     for i in range(cgraph.numNodes):
         print("parent Node = %d, child Nodes = %s" % (i, cgraph.getChildIndices(i)))
-    # cg2 = CoveredGraph(degree=3, numLayers=4,initialQValues=0.01)
-    # print("cg2=", cg2)
-    for i in range(5):
-        print("cgraph Values on do nothing =", cgraph.doNothing())
+
+    graphObs = cgraph.doNothing()
+    print("graphObs=",graphObs)
+    rewards = []
+    for i in range(10000):
+        graphObs = cgraph.doNothing()
+        rewards.append(graphObs[0])
+    # print("cgraph Values on do nothing =", rewards)
+    print("cgraph Average Rewards on Do nothing =", stats.fmean(rewards))
+    rewardsOnDo = []
+    for i in range(10000):
+        graphObs = cgraph.doOperation([118,119,120],[1,1,1])
+        rewardsOnDo.append(graphObs[0])
+    # print("cgraph Values on do lastNodes =", rewardsOnDo)
+    print("cgraph Average Rewards on Do =", stats.fmean(rewardsOnDo))
