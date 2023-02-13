@@ -1,6 +1,7 @@
 # Models
 models/*
 outputs/
+oldFiles/
 bfg.jar
 
 datasets/RealToxicityPrompts/*
