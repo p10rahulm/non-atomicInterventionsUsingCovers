@@ -52,6 +52,8 @@ class CoveredGraph:
         self.penultimateLayerEndIndex = self.leafNodeStartIndex - 1  # inclusive
         self.leafSet = list(range(self.leafNodeStartIndex,self.leafNodeEndIndex+1))
         self.penultimateLayerSet = list(range(self.penultimateLayerStartIndex, self.penultimateLayerEndIndex + 1))
+        self.chosenInterventionSet = self.getChildIndices(self.penultimateLayerEndIndex)
+        self.chosenInterventionValues = [1,1,1]
 
         self.mu = mu
         self.epsilon = epsilon
@@ -63,9 +65,10 @@ class CoveredGraph:
                f"\nleafNodeStartIndex={self.leafNodeStartIndex}, leafNodeEndIndex={self.leafNodeEndIndex}, " \
                f"\npenultimateLayerStartIndex={self.penultimateLayerStartIndex}, " \
                f"penultimateLayerEndIndex={self.penultimateLayerEndIndex}, " \
-               f"\nleafSet={self.leafSet}, " \
-               f"penultimateLayerSet={self.penultimateLayerSet}, " \
+               f"\nleafSet={self.leafSet}, penultimateLayerSet={self.penultimateLayerSet}, " \
                f"\nnumPenultimate={self.numPenultimate}, mu={self.mu}, epsilon={self.epsilon}" \
+               f"\nchosenInterventionSet={self.chosenInterventionSet}, " \
+               f"chosenInterventionValues={self.chosenInterventionValues}" \
                f"\nleafQvals={self.leafQvals}), assignmentSet={self.assignmentSet})"
 
     def checkLeafIndex(self, k):
@@ -132,6 +135,21 @@ class CoveredGraph:
                 sampledVals[currentIndex] = (sampledVals[childIndices].sum() > 0) * 1
         return sampledVals
 
+    def getRewardOnDoNothing(self):
+        # Check if any of the last but 1 in the penultimate layer is 1, then return reward 1
+        for i in range(self.numPenultimate-1):
+            if randomBool(self.mu) ==1:
+                return 1
+        # Check if all children of the last penultimate layer node is 1
+        topBool = 1
+        for i in range(self.degree):
+            if randomBool(self.mu) ==0:
+                topBool=0
+        if topBool:
+            return randomBool(self.mu+self.epsilon)
+        else:
+            return randomBool(self.mu)
+
     def doOperation(self, intervenedIndices, intervenedValues):
         for currentIndex in intervenedIndices:
             if not self.checkLeafIndex(currentIndex):
@@ -172,6 +190,24 @@ class CoveredGraph:
                 # sampledVals[i] = sum
                 sampledVals[currentIndex] = (sampledVals[childIndices].sum() > 0) * 1
         return sampledVals
+
+    def getRewardOnDoOperation(self, intervenedIndices, intervenedValues):
+        if np.array_equal(intervenedIndices,self.chosenInterventionSet) and np.array_equal(intervenedValues,self.chosenInterventionValues):
+            # If chosen intervention is done, and the boolean value is 1, then return 1
+            if randomBool(self.mu + self.epsilon):
+                return 1
+            # Or if any of the other values are randomly known to be 1, then return 1
+            else:
+                for i in range(self.numPenultimate-1):
+                    if randomBool(self.mu) == 1:
+                        return 1
+        else:
+            # But if chosen intervention is not 1, but any of the other booleans is randomly 1, then return 1
+            for i in range(self.numPenultimate):
+                if randomBool(self.mu) ==1:
+                    return 1
+        # if none of the random values is 1, return 0
+        return 0
 
     def getAssignmentSet(self):
         stringFormat = '{0:0' + str(self.degree) + 'b}'
