@@ -233,6 +233,33 @@ class CoveredGraph:
 
         return numTimesSeen,numTimesOne
 
+    def sampleLeavesUniformly(self,numSamples):
+        choiceArray = np.random.choice(2 ** self.degree, numSamples)
+        countOfChoicesDict = collections.Counter(choiceArray)
+        # print("countOfChoicesDict=", countOfChoicesDict)
+        countOfChoicesOrderedArray = []
+        for i in range(2 ** self.degree):
+            countOfChoicesOrderedArray.append(countOfChoicesDict[i])
+
+        return countOfChoicesOrderedArray
+
+    def getProbsWithDoOperationUsingCovers(self, numTimesIntervened):
+        if numTimesIntervened < 0:
+            raise Exception("Sorry, not a valid do() operation")
+        numTimesSeen = np.zeros((self.numPenultimate, 2 ** self.degree))
+        numTimesOne = np.zeros((self.numPenultimate, 2 ** self.degree))
+        for penultimateIndex in range(self.numPenultimate):
+            numTimesSeen[penultimateIndex] = self.sampleLeavesUniformly(numTimesIntervened)
+
+        for row in range(self.numPenultimate):
+            for col in range(2**self.degree):
+                if row == self.numPenultimate-1 and col == 2**self.degree-1:
+                    numTimesOne[row, col] = np.random.binomial(n=numTimesSeen[row, col], p=self.mu+self.epsilon)
+                else:
+                    numTimesOne[row,col] = np.random.binomial(n=numTimesSeen[row,col], p=self.mu)
+
+        return numTimesSeen,numTimesOne
+
     def getRewardOnDoOperation(self, intervenedIndices, intervenedValues):
         if np.array_equal(intervenedIndices, self.chosenInterventionSet) and \
                 np.array_equal(intervenedValues, self.chosenInterventionValues):

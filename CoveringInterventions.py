@@ -3,30 +3,20 @@ from coveredTree import CoveredGraph, randomBool
 from tqdm import tqdm
 import time
 
-def getYabeRegret(cgraph, numTotalSamples):
+def getCIRegret(cgraph, numTotalSamples):
+    numTimesSeen, numTimesOne = cgraph.getProbsWithDoOperationUsingCovers(numTotalSamples)
+
     numInterventionSets = cgraph.numPenultimate
     numInterventionsPerSet = 2 ** cgraph.degree
-    numTimesSeen = np.zeros((numInterventionSets, numInterventionsPerSet),dtype=int)
-    numTimesOne = np.zeros((numInterventionSets, numInterventionsPerSet),dtype=int)
-    probOne = np.zeros((numInterventionSets, numInterventionsPerSet),dtype=float)
+    probOne = np.zeros((numInterventionSets, numInterventionsPerSet), dtype=float)
     avgRewardOnIntervention = np.zeros((numInterventionSets, numInterventionsPerSet), dtype=float)
-
-
-    numInterventions = numInterventionSets * (2 ** cgraph.degree)
-    # Number of interventions sets is equal to the number of penultimate nodes as for each
-    numSamplesPerIntervention = numTotalSamples // numInterventions
-
-    for row in range(numInterventionSets):
-        for col in range(numInterventionsPerSet):
-            currTimesSeen, currTimesOne = cgraph.getProbsWithDoOperation(row,col,numSamplesPerIntervention)
-            numTimesSeen = numTimesSeen + currTimesSeen
-            numTimesOne = numTimesOne + currTimesOne
     for row in range(numInterventionSets):
         for col in range(numInterventionsPerSet):
             probOne[row,col] = numTimesOne[row,col]/numTimesSeen[row,col]
     # print("numTimesSeen=",numTimesSeen)
     # print("numTimesOne=", numTimesOne)
     # print("probOne=", probOne)
+
     for row in range(numInterventionSets):
         for col in range(numInterventionsPerSet):
             prod = 1
@@ -53,14 +43,14 @@ if __name__ == "__main__":
     rd.seed(8)
     # cgraph = CoveredGraph.__new__(CoveredGraph)
     # cgraph.__init__(degree=3, numLayers=4, initialQValues=0.0,mu=0.05,epsilon=0.05)
-    degree, numLayers, initialQValues, mu, epsilon = 3, 3, 0, 0.1, 0.05
-    numTotalSamples = 20000
+    degree, numLayers, initialQValues, mu, epsilon = 3, 3, 0, 0.05, 0.05
+    numTotalSamples = 2000
     numExperimentsToAvgOver = 50
     regretList = np.zeros(numExperimentsToAvgOver)
     for i in tqdm(range(numExperimentsToAvgOver)):
         # print("iterationNumber = ",i)
         cgraph = CoveredGraph(degree=degree, numLayers=numLayers, initialQValues=initialQValues, mu=mu, epsilon=epsilon)
-        regret = getYabeRegret(cgraph, numTotalSamples)
+        regret = getCIRegret(cgraph, numTotalSamples)
         regretList[i] = regret
     print("regretList=", regretList)
     print("regret=", regretList.mean())
