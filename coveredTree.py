@@ -1,6 +1,7 @@
 import numpy as np, random as rd
 import statistics as stats
-import time
+import time, collections
+import utils
 
 
 def randomBool(qVal):
@@ -50,10 +51,10 @@ class CoveredGraph:
         self.leafNodeEndIndex = self.numNodes - 1  # inclusive
         self.penultimateLayerStartIndex = self.leafNodeStartIndex - self.numPenultimate  # inclusive
         self.penultimateLayerEndIndex = self.leafNodeStartIndex - 1  # inclusive
-        self.leafSet = list(range(self.leafNodeStartIndex,self.leafNodeEndIndex+1))
+        self.leafSet = list(range(self.leafNodeStartIndex, self.leafNodeEndIndex + 1))
         self.penultimateLayerSet = list(range(self.penultimateLayerStartIndex, self.penultimateLayerEndIndex + 1))
         self.chosenInterventionSet = self.getChildIndices(self.penultimateLayerEndIndex)
-        self.chosenInterventionValues = [1,1,1]
+        self.chosenInterventionValues = [1, 1, 1]
 
         self.mu = mu
         self.epsilon = epsilon
@@ -138,16 +139,16 @@ class CoveredGraph:
 
     def getRewardOnDoNothing(self):
         # Check if any of the last but 1 in the penultimate layer is 1, then return reward 1
-        for i in range(self.numPenultimate-1):
-            if randomBool(self.mu) ==1:
+        for i in range(self.numPenultimate - 1):
+            if randomBool(self.mu) == 1:
                 return 1
         # Check if all children of the last penultimate layer node is 1
         topBool = 1
         for i in range(self.degree):
-            if randomBool(self.mu) ==0:
-                topBool=0
+            if randomBool(self.mu) == 0:
+                topBool = 0
         if topBool:
-            return randomBool(self.mu+self.epsilon)
+            return randomBool(self.mu + self.epsilon)
         else:
             return randomBool(self.mu)
 
@@ -188,73 +189,82 @@ class CoveredGraph:
                 sampledVals[currentIndex] = (sampledVals[childIndices].sum() > 0) * 1
         return sampledVals
 
-    def doOperationWithGp(self, intervenedIndices, intervenedValues):
-        for currentIndex in intervenedIndices:
-            if not self.checkLeafIndex(currentIndex):
-                raise Exception("Sorry, not a valid do() operation")
-        for value in intervenedValues:
-            if value not in [0, 1]:
-                raise Exception("Sorry, not a valid do() operation")
+    def sampleLeaves(self, numSamples):
+        # print("numSamples=",numSamples)
+        probArray = []
+        for i in range(self.degree+1):
+            numTimes = utils.binom(self.degree,i)
+            value = (1 - self.probOf1AtLeaves) ** (self.degree-i) * self.probOf1AtLeaves ** i
+            probArray.extend([value]*numTimes)
+        # print("probarray=",probArray)
+        choiceArray = np.random.choice(2**self.degree, numSamples, p=probArray)
+        # print("choiceArray=", choiceArray)
+        countOfChoicesDict = collections.Counter(choiceArray)
+        # print("countOfChoicesDict=", countOfChoicesDict)
+        countOfChoicesOrderedArray=[]
+        for i in range(2**self.degree):
+            countOfChoicesOrderedArray.append(countOfChoicesDict[i])
+        # print("countOfChoicesOrderedArray=", countOfChoicesOrderedArray)
+        # countOfChoicesOrderedArray = [countOfChoicesDict[x] for x in sorted(countOfChoicesDict.keys())]
+        return countOfChoicesOrderedArray
 
-        sampledVals = np.zeros(self.numNodes)
-        for currentIndex in reversed(range(self.numNodes)):
-            if self.checkLeafIndex(currentIndex):
-                if currentIndex in intervenedIndices:
-                    currentIndexLocationInInterevenedArray = intervenedIndices.index(currentIndex)
-                    intervenedValue = intervenedValues[currentIndexLocationInInterevenedArray]
-                    sampledVals[currentIndex] = intervenedValue
-                else:
-                    leafIndex = currentIndex - self.numInternal
-                    qVal = self.leafQvals[leafIndex]
-                    sampledBoolean = randomBool(qVal)
-                    sampledVals[currentIndex] = sampledBoolean
 
-            elif self.checkPenultimateLayer(currentIndex):
-                if self.checkChosenParentPenultimate(currentIndex):
-                    childIndices = self.getChildIndices(currentIndex)
-                    if sampledVals[childIndices].sum() == self.degree:
-                        qVal = self.mu + self.epsilon
-                    else:
-                        qVal = self.mu
-                    sampledVals[currentIndex] = randomBool(qVal)
-                else:
-                    qVal = self.mu
-                    sampledVals[currentIndex] = randomBool(qVal)
+    def getProbsWithDoOperation(self, opPenultimateIndex, opPenultimateValueIndex, numTimesIntervened):
+        if opPenultimateIndex < 0 or opPenultimateValueIndex >= self.numPenultimate or \
+                opPenultimateValueIndex < 0 or opPenultimateValueIndex >= 2 ** self.degree:
+            raise Exception("Sorry, not a valid do() operation")
+        numTimesSeen = np.zeros((self.numPenultimate, 2 ** self.degree))
+        numTimesOne = np.zeros((self.numPenultimate, 2 ** self.degree))
+        for penultimateIndex in range(self.numPenultimate):
+            if penultimateIndex!=opPenultimateIndex:
+                # print("opPenultimateIndex=",opPenultimateIndex,"opPenultimateValueIndex=",opPenultimateValueIndex)
+                returnedSamples = self.sampleLeaves(numTimesIntervened)
+                # print("numTimesIntervened=", numTimesIntervened,"returnedSamples=",returnedSamples)
+                numTimesSeen[penultimateIndex] = returnedSamples
             else:
-                childIndices = self.getChildIndices(currentIndex)
-                sampledVals[currentIndex] = (sampledVals[childIndices].sum() > 0) * 1
-        return sampledVals
+                numTimesSeen[penultimateIndex,opPenultimateValueIndex] = numTimesIntervened
+
+        for row in range(self.numPenultimate):
+            for col in range(2**self.degree):
+                if row == self.numPenultimate-1 and col == 2**self.degree-1:
+                    numTimesOne[row, col] = np.random.binomial(n=numTimesSeen[row, col], p=self.mu+self.epsilon)
+                else:
+                    numTimesOne[row,col] = np.random.binomial(n=numTimesSeen[row,col], p=self.mu)
+
+        return numTimesSeen,numTimesOne
 
     def getRewardOnDoOperation(self, intervenedIndices, intervenedValues):
-        if np.array_equal(intervenedIndices,self.chosenInterventionSet) and \
-                np.array_equal(intervenedValues,self.chosenInterventionValues):
+        if np.array_equal(intervenedIndices, self.chosenInterventionSet) and \
+                np.array_equal(intervenedValues, self.chosenInterventionValues):
             # If chosen intervention is done, and the boolean value is 1, then return 1
             if randomBool(self.mu + self.epsilon):
                 return 1
             # Or if any of the other values are randomly known to be 1, then return 1
             else:
-                if np.random.binomial(n=self.numPenultimate-1, p=self.mu)>0:
+                if np.random.binomial(n=self.numPenultimate - 1, p=self.mu) > 0:
                     return 1
 
         else:
             # But if chosen intervention is not 1, but any of the other booleans is randomly 1, then return 1
             if np.random.binomial(n=self.numPenultimate, p=self.mu) > 0:
-                    return 1
+                return 1
         # if none of the random values is 1, return 0
         return 0
 
-    def getAvgRewardOnMultipleDoOperations(self, intervenedIndices, intervenedValues,numOps):
-        if np.array_equal(intervenedIndices,self.chosenInterventionSet) and np.array_equal(intervenedValues,self.chosenInterventionValues):
+    def getAvgRewardOnMultipleDoOperations(self, intervenedIndices, intervenedValues, numOps):
+        if np.array_equal(intervenedIndices, self.chosenInterventionSet) and np.array_equal(intervenedValues,
+                                                                                            self.chosenInterventionValues):
             # If chosen intervention is done:
             # Then prob of 1 is 1-prob of 0 = 1- prob that all penultimate nodes are 0
-            probOf1 = 1- (1-self.mu - self.epsilon)*(1-self.mu)**(self.numPenultimate-1)
+            probOf1 = 1 - (1 - self.mu - self.epsilon) * (1 - self.mu) ** (self.numPenultimate - 1)
             num1s = np.random.binomial(n=numOps, p=probOf1)
-            avg = num1s/numOps
+            avg = num1s / numOps
         else:
             # But if chosen intervention is not the intervened one
             # Then prob of 1 is 1-prob of 0 = 1- prob that all penultimate nodes are 0
-            probOf1 = 1 - ((1 - self.mu) ** (self.numPenultimate)*(1-self.probOf1AtLeaves**2) +
-                           (1 - self.mu) ** (self.numPenultimate-1)*(1-self.mu-self.epsilon)*(self.probOf1AtLeaves**2))
+            probOf1 = 1 - ((1 - self.mu) ** (self.numPenultimate) * (1 - self.probOf1AtLeaves ** 2) +
+                           (1 - self.mu) ** (self.numPenultimate - 1) * (1 - self.mu - self.epsilon) * (
+                                   self.probOf1AtLeaves ** 2))
             num1s = np.random.binomial(n=numOps, p=probOf1)
             avg = num1s / numOps
 
@@ -263,14 +273,17 @@ class CoveredGraph:
     def getAssignmentSet(self):
         stringFormat = '{0:0' + str(self.degree) + 'b}'
         assignments = [[int(j) for j in stringFormat.format(i)] for i in range(2 ** self.degree)]
-        return assignments
+        sortedAssignments = sorted(assignments, key=sum)
+        return sortedAssignments
 
-    def getInterventionFromIndex(self,index):
-        penultimateIndex = self.penultimateLayerStartIndex + index//(2**self.degree)
+
+    def getInterventionFromIndex(self, index):
+        penultimateIndex = self.penultimateLayerStartIndex + index // (2 ** self.degree)
         childrenOfPenultimate = self.getChildIndices(penultimateIndex)
-        assignmentIndex = index % (2**self.degree)
+        assignmentIndex = index % (2 ** self.degree)
         assignment = self.assignmentSet[assignmentIndex]
-        return (penultimateIndex,childrenOfPenultimate,assignmentIndex,assignment)
+        return (penultimateIndex, childrenOfPenultimate, assignmentIndex, assignment)
+
 
 if __name__ == "__main__":
     startTime = time.time()
@@ -307,4 +320,4 @@ if __name__ == "__main__":
     print("assignments=", assignments)
 
     print("cgraph=", cgraph)
-    print("time taken in seconds:",time.time()-startTime)
+    print("time taken in seconds:", time.time() - startTime)
