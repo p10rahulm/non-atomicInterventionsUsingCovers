@@ -184,30 +184,40 @@ class CoveredGraph:
                     sampledVals[currentIndex] = randomBool(qVal)
             else:
                 childIndices = self.getChildIndices(currentIndex)
-                # sum = 0
-                # for j in childIndices:
-                #     sum += sampledVals[j]
-                # sampledVals[i] = sum
                 sampledVals[currentIndex] = (sampledVals[childIndices].sum() > 0) * 1
         return sampledVals
 
     def getRewardOnDoOperation(self, intervenedIndices, intervenedValues):
-        if np.array_equal(intervenedIndices,self.chosenInterventionSet) and np.array_equal(intervenedValues,self.chosenInterventionValues):
+        if np.array_equal(intervenedIndices,self.chosenInterventionSet) and \
+                np.array_equal(intervenedValues,self.chosenInterventionValues):
             # If chosen intervention is done, and the boolean value is 1, then return 1
             if randomBool(self.mu + self.epsilon):
                 return 1
             # Or if any of the other values are randomly known to be 1, then return 1
             else:
-                for i in range(self.numPenultimate-1):
-                    if randomBool(self.mu) == 1:
-                        return 1
+                if np.random.binomial(n=self.numPenultimate-1, p=self.mu)>0:
+                    return 1
+
         else:
             # But if chosen intervention is not 1, but any of the other booleans is randomly 1, then return 1
-            for i in range(self.numPenultimate):
-                if randomBool(self.mu) ==1:
+            if np.random.binomial(n=self.numPenultimate, p=self.mu) > 0:
                     return 1
         # if none of the random values is 1, return 0
         return 0
+
+    def getAvgRewardOnMultipleDoOperations(self, intervenedIndices, intervenedValues,numOps):
+        if np.array_equal(intervenedIndices,self.chosenInterventionSet) and np.array_equal(intervenedValues,self.chosenInterventionValues):
+            # If chosen intervention is done:
+            probOf1 = 1- (1-self.mu - self.epsilon)*(1-self.mu)**(self.numPenultimate-1)
+            num1s = np.random.binomial(n=numOps, p=probOf1)
+            avg = num1s/numOps
+        else:
+            # But if chosen intervention is not the intervened one
+            probOf1 = 1 - (1 - self.mu) ** (self.numPenultimate)
+            num1s = np.random.binomial(n=numOps, p=probOf1)
+            avg = num1s / numOps
+
+        return avg
 
     def getAssignmentSet(self):
         stringFormat = '{0:0' + str(self.degree) + 'b}'
