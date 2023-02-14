@@ -57,7 +57,8 @@ class CoveredGraph:
 
         self.mu = mu
         self.epsilon = epsilon
-        self.leafQvals = np.ones(self.numLeaves) * initialQValues
+        self.probOf1AtLeaves = initialQValues
+        self.leafQvals = np.ones(self.numLeaves) * self.probOf1AtLeaves
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}(degree={self.degree}, numLayers={self.numLayers}, " \
@@ -187,6 +188,43 @@ class CoveredGraph:
                 sampledVals[currentIndex] = (sampledVals[childIndices].sum() > 0) * 1
         return sampledVals
 
+    def doOperationWithGp(self, intervenedIndices, intervenedValues):
+        for currentIndex in intervenedIndices:
+            if not self.checkLeafIndex(currentIndex):
+                raise Exception("Sorry, not a valid do() operation")
+        for value in intervenedValues:
+            if value not in [0, 1]:
+                raise Exception("Sorry, not a valid do() operation")
+
+        sampledVals = np.zeros(self.numNodes)
+        for currentIndex in reversed(range(self.numNodes)):
+            if self.checkLeafIndex(currentIndex):
+                if currentIndex in intervenedIndices:
+                    currentIndexLocationInInterevenedArray = intervenedIndices.index(currentIndex)
+                    intervenedValue = intervenedValues[currentIndexLocationInInterevenedArray]
+                    sampledVals[currentIndex] = intervenedValue
+                else:
+                    leafIndex = currentIndex - self.numInternal
+                    qVal = self.leafQvals[leafIndex]
+                    sampledBoolean = randomBool(qVal)
+                    sampledVals[currentIndex] = sampledBoolean
+
+            elif self.checkPenultimateLayer(currentIndex):
+                if self.checkChosenParentPenultimate(currentIndex):
+                    childIndices = self.getChildIndices(currentIndex)
+                    if sampledVals[childIndices].sum() == self.degree:
+                        qVal = self.mu + self.epsilon
+                    else:
+                        qVal = self.mu
+                    sampledVals[currentIndex] = randomBool(qVal)
+                else:
+                    qVal = self.mu
+                    sampledVals[currentIndex] = randomBool(qVal)
+            else:
+                childIndices = self.getChildIndices(currentIndex)
+                sampledVals[currentIndex] = (sampledVals[childIndices].sum() > 0) * 1
+        return sampledVals
+
     def getRewardOnDoOperation(self, intervenedIndices, intervenedValues):
         if np.array_equal(intervenedIndices,self.chosenInterventionSet) and \
                 np.array_equal(intervenedValues,self.chosenInterventionValues):
@@ -208,12 +246,15 @@ class CoveredGraph:
     def getAvgRewardOnMultipleDoOperations(self, intervenedIndices, intervenedValues,numOps):
         if np.array_equal(intervenedIndices,self.chosenInterventionSet) and np.array_equal(intervenedValues,self.chosenInterventionValues):
             # If chosen intervention is done:
+            # Then prob of 1 is 1-prob of 0 = 1- prob that all penultimate nodes are 0
             probOf1 = 1- (1-self.mu - self.epsilon)*(1-self.mu)**(self.numPenultimate-1)
             num1s = np.random.binomial(n=numOps, p=probOf1)
             avg = num1s/numOps
         else:
             # But if chosen intervention is not the intervened one
-            probOf1 = 1 - (1 - self.mu) ** (self.numPenultimate)
+            # Then prob of 1 is 1-prob of 0 = 1- prob that all penultimate nodes are 0
+            probOf1 = 1 - ((1 - self.mu) ** (self.numPenultimate)*(1-self.probOf1AtLeaves**2) +
+                           (1 - self.mu) ** (self.numPenultimate-1)*(1-self.mu-self.epsilon)*(self.probOf1AtLeaves**2))
             num1s = np.random.binomial(n=numOps, p=probOf1)
             avg = num1s / numOps
 
