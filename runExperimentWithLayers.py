@@ -19,7 +19,7 @@ if __name__ == "__main__":
     # methods = [getCIRegret]
 
     methods, degree, mu, epsilon, initialQValues, numTotalSamples, listOfNumberOfLayers, numExperimentsToAvgOver = \
-        [getPureBanditRegret], 2, 0.1, 0.2, 0, 1000000, list(range(3, 8)), 100
+        [getPureBanditRegret], 2, 0.2, 0.2, 0, 3.5e7, list(range(3, 8)), 100
 
 
     # methods, degree, mu, epsilon, initialQValues, numTotalSamples, listOfNumberOfLayers, numExperimentsToAvgOver = \
