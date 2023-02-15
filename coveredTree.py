@@ -1,7 +1,7 @@
 import numpy as np, random as rd
 import statistics as stats
 import time, collections
-import utils
+import math
 
 
 def randomBool(qVal):
@@ -54,7 +54,7 @@ class CoveredGraph:
         self.leafSet = list(range(self.leafNodeStartIndex, self.leafNodeEndIndex + 1))
         self.penultimateLayerSet = list(range(self.penultimateLayerStartIndex, self.penultimateLayerEndIndex + 1))
         self.chosenInterventionSet = self.getChildIndices(self.penultimateLayerEndIndex)
-        self.chosenInterventionValues = [1, 1, 1]
+        self.chosenInterventionValues = [1]*self.degree
 
         self.mu = mu
         self.epsilon = epsilon
@@ -193,7 +193,7 @@ class CoveredGraph:
         # print("numSamples=",numSamples)
         probArray = []
         for i in range(self.degree+1):
-            numTimes = utils.binom(self.degree,i)
+            numTimes = math.comb(self.degree, i)
             value = (1 - self.probOf1AtLeaves) ** (self.degree-i) * self.probOf1AtLeaves ** i
             probArray.extend([value]*numTimes)
         # print("probarray=",probArray)
@@ -279,21 +279,24 @@ class CoveredGraph:
         return 0
 
     def getAvgRewardOnMultipleDoOperations(self, intervenedIndices, intervenedValues, numOps):
-        if np.array_equal(intervenedIndices, self.chosenInterventionSet) and np.array_equal(intervenedValues,
-                                                                                            self.chosenInterventionValues):
+        if np.array_equal(intervenedIndices, self.chosenInterventionSet) and \
+                np.array_equal(intervenedValues,self.chosenInterventionValues):
             # If chosen intervention is done:
             # Then prob of 1 is 1-prob of 0 = 1- prob that all penultimate nodes are 0
             probOf1 = 1 - (1 - self.mu - self.epsilon) * (1 - self.mu) ** (self.numPenultimate - 1)
             num1s = np.random.binomial(n=numOps, p=probOf1)
             avg = num1s / numOps
+            # print("num1s=", num1s, "avg=", avg)
         else:
             # But if chosen intervention is not the intervened one
             # Then prob of 1 is 1-prob of 0 = 1- prob that all penultimate nodes are 0
             probOf1 = 1 - ((1 - self.mu) ** (self.numPenultimate) * (1 - self.probOf1AtLeaves ** 2) +
                            (1 - self.mu) ** (self.numPenultimate - 1) * (1 - self.mu - self.epsilon) * (
                                    self.probOf1AtLeaves ** 2))
+
             num1s = np.random.binomial(n=numOps, p=probOf1)
             avg = num1s / numOps
+            # print("num1s=",num1s,"avg=",avg)
 
         return avg
 

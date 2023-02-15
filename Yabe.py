@@ -2,6 +2,8 @@ import numpy as np, random as rd, statistics as stats
 from coveredTree import CoveredGraph, randomBool
 from tqdm import tqdm
 import time
+from utils import getAvgRegret
+
 
 def getYabeRegret(cgraph, numTotalSamples):
     numInterventionSets = cgraph.numPenultimate
@@ -56,13 +58,19 @@ if __name__ == "__main__":
     degree, numLayers, initialQValues, mu, epsilon = 3, 3, 0, 0.1, 0.05
     numTotalSamples = 20000
     numExperimentsToAvgOver = 50
-    regretList = np.zeros(numExperimentsToAvgOver)
-    for i in tqdm(range(numExperimentsToAvgOver)):
-        # print("iterationNumber = ",i)
-        cgraph = CoveredGraph(degree=degree, numLayers=numLayers, initialQValues=initialQValues, mu=mu, epsilon=epsilon)
-        regret = getYabeRegret(cgraph, numTotalSamples)
-        regretList[i] = regret
+    regretMean, regretList = getAvgRegret(numExperimentsToAvgOver, getYabeRegret,
+                                          numTotalSamples, degree, numLayers,
+                                          initialQValues, mu, epsilon)
+
     print("regretList=", regretList)
-    print("regret=", regretList.mean())
+    print("regret=", regretMean)
+    # regretList = np.zeros(numExperimentsToAvgOver)
+    # for i in tqdm(range(numExperimentsToAvgOver)):
+    #     # print("iterationNumber = ",i)
+    #     cgraph = CoveredGraph(degree=degree, numLayers=numLayers, initialQValues=initialQValues, mu=mu, epsilon=epsilon)
+    #     regret = getYabeRegret(cgraph, numTotalSamples)
+    #     regretList[i] = regret
+    # print("regretList=", regretList)
+    # print("regret=", regretList.mean())
 
     print("time taken in seconds:", time.time() - startTime)

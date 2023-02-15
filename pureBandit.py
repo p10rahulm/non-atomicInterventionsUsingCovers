@@ -2,7 +2,7 @@ import numpy as np, random as rd, statistics as stats
 import time
 from coveredTree import CoveredGraph, randomBool
 from tqdm import tqdm
-
+from utils import getAvgRegret
 
 def getPureBanditRegret(cgraph, numTotalSamples):
     numInterventionSets = cgraph.numPenultimate
@@ -28,7 +28,7 @@ def getPureBanditRegret(cgraph, numTotalSamples):
     # print("penultimateIndex=", penultimateIndex, "children=", childrenOfPenultimate, "assignment=", assignment,
     #       "assignmentIndex=", assignmentIndex, "avg reward=", avgRewardsList[maxIndex])
 
-    regret = 0 if (penultimateIndex == cgraph.penultimateLayerEndIndex and assignmentIndex == 7) else cgraph.epsilon
+    regret = 0 if (penultimateIndex == cgraph.penultimateLayerEndIndex and assignmentIndex == 2**cgraph.degree-1) else cgraph.epsilon
     return regret
 
 def getPureBanditRegret2(cgraph, numTotalSamples):
@@ -105,8 +105,9 @@ if __name__ == "__main__":
     rd.seed(8)
     # cgraph = CoveredGraph.__new__(CoveredGraph)
     # cgraph.__init__(degree=3, numLayers=4, initialQValues=0.0,mu=0.05,epsilon=0.05)
-    degree, numLayers, initialQValues, mu, epsilon = 3, 3, 0, 0.1, 0.05
-    numTotalSamples = 20000
+    # degree, numLayers, initialQValues, mu, epsilon = 3, 3, 0, 0.1, 0.05
+    degree, numLayers, initialQValues, mu, epsilon = 2, 3, 0, 0.1, 0.05
+    numTotalSamples = 10000
     numExperimentsToAvgOver = 2
     regretList = np.zeros(numExperimentsToAvgOver)
     # print("Method 1")
@@ -133,13 +134,17 @@ if __name__ == "__main__":
     # Another Method
     print("Method 3")
     numExperimentsToAvgOver = 50
-    regretList = np.zeros(numExperimentsToAvgOver)
-    for i in tqdm(range(numExperimentsToAvgOver)):
-        # print("iterationNumber = ",i)
-        cgraph = CoveredGraph(degree=degree, numLayers=numLayers, initialQValues=initialQValues, mu=mu, epsilon=epsilon)
-        regret = getPureBanditRegret(cgraph, numTotalSamples)
-        regretList[i] = regret
+    regretMean, regretList = getAvgRegret(numExperimentsToAvgOver, getPureBanditRegret,
+                                          numTotalSamples, degree, numLayers,
+                                          initialQValues, mu, epsilon)
     print("regretList=", regretList)
-    print("regret=", regretList.mean())
+    print("regret=", regretMean)
+    # regretList = np.zeros(numExperimentsToAvgOver)
+    # for i in tqdm(range(numExperimentsToAvgOver)):
+    #     # print("iterationNumber = ",i)
+    #     cgraph = CoveredGraph(degree=degree, numLayers=numLayers, initialQValues=initialQValues, mu=mu, epsilon=epsilon)
+    #     regret = getPureBanditRegret(cgraph, numTotalSamples)
+    #     regretList[i] = regret
+
 
     print("time taken in seconds:", time.time() - startTime)
