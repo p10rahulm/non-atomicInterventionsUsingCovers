@@ -1,7 +1,7 @@
 import seaborn as sns, pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mtick
-from scipy.interpolate import make_interp_spline
+from scipy.interpolate import make_interp_spline, Rbf, InterpolatedUnivariateSpline, CubicSpline, interp1d, KroghInterpolator
 import numpy as np
 from datetime import datetime
 
@@ -15,16 +15,39 @@ axes = []
 markers = ['^','h','o']
 palette  = sns.color_palette("muted")
 
-legendNames = ['DirectExploration','Yabe et al.','CoveringInterventions']
+
 for i in range(len(df.columns)):
     y = df.iloc[:, i]
     x = df.index
-    X_Y_Spline = make_interp_spline(df.index, df.iloc[:, i])
-    X_ = np.linspace(x.min(), x.max(), 500)
-    Y_ = X_Y_Spline(X_)
+    # ax = sns.lmplot(y=df.iloc[:,i],x=df.index, ci=None, order=4, truncate=False, data=df)
+    X_ = np.linspace(x.min(), x.max(), 50)
 
-    ax = sns.lineplot(y=df.iloc[:,i],x=df.index, label=legendNames[i], marker = markers[i], markersize=7,color =palette[i])
-    # ax = sns.lineplot(y=Y_,x=X_, label=df.columns[i], marker = markers[i], markersize=7,color =palette[i])
+    X_Y_Spline = make_interp_spline(df.index, df.iloc[:, i])
+    SplineY = X_Y_Spline(X_)
+
+    rbf = Rbf(x, y)
+    RBFY = rbf(X_)
+
+    ius = InterpolatedUnivariateSpline(x, y)
+    iusY = ius(X_)
+
+    cubic = CubicSpline(x, y)
+    cubicY = cubic(X_)
+    cubicY2 = cubic(x)
+
+    interped1d = interp1d(x, y)
+    interpedY = interped1d(X_)
+    interpedY2 = interped1d(x)
+
+    # ax = sns.lineplot(y=df.iloc[:,i],x=df.index, label=df.columns[i], marker = markers[i], markersize=7,color =palette[i])
+
+    # ax = sns.lineplot(y=SplineY,x=X_, label=df.columns[i], marker = markers[i], markersize=7,color =palette[i*3])
+    # ax = sns.lineplot(y=RBFY, x=X_, label=df.columns[i], marker=markers[i], markersize=7, color=palette[i*3+1])
+    # ax = sns.lineplot(y=iusY, x=X_, label=df.columns[i], marker=markers[i], markersize=7, color=palette[i*3+2])
+    # ax = sns.lineplot(y=cubicY, x=X_, label=df.columns[i], marker=markers[i], markersize=7, color=palette[i*3+2])
+    ax = sns.lineplot(y=cubicY2, x=x, label=df.columns[i], marker=markers[i], markersize=7, color=palette[i*3+2])
+    # ax = sns.lineplot(y=interpedY, x=X_, label=df.columns[i], marker=markers[i], markersize=7, color=palette[i*3+2])
+    # ax = sns.lineplot(y=interpedY2, x=x, label=df.columns[i], marker=markers[i], markersize=7, color=palette[i*3+2])
     # ax = sns.lineplot(y=Y_,x=X_, label=df.columns[i],color =palette[i])
     # ax = sns.regplot(data=df.iloc[:, i], label=df.columns[i])
     # ax = sns.regplot(x=df.index, y=df.iloc[:, i], order=0.5)

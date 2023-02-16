@@ -3,8 +3,10 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as mtick
 from scipy.interpolate import make_interp_spline
 import numpy as np
+from datetime import datetime
 
-inputFilePath = "outputs/regretWithNodes.csv"
+# inputFilePath = "outputs/regretWithNodes.csv"
+inputFilePath = "outputs/regretWithNumLayers_0.1mu0.2eps300obsPureBanditRegretYabeRegretCIRegret.csv"
 df = pd.read_csv(inputFilePath, index_col=0)
 df.columns = [name.replace("Regret","") for name in df.columns]
 print(df.columns)
@@ -13,7 +15,9 @@ axes = []
 markers = ['^','h','o']
 palette  = sns.color_palette("muted")
 
-
+# legendNames = ['UNIFORM EXPLORATION','PROPAGATING INFERENCE','COVERING INTERVENTIONS']
+legendNames = ['UniformExploration','PropagatingInference','CoveringInterventions']
+legendNames = ['DirectExploration','Yabe et al.','CoveringInterventions']
 for i in range(len(df.columns)):
     y = df.iloc[:, i]
     x = df.index
@@ -21,7 +25,7 @@ for i in range(len(df.columns)):
     X_ = np.linspace(x.min(), x.max(), 500)
     Y_ = X_Y_Spline(X_)
 
-    ax = sns.lineplot(y=df.iloc[:,i],x=df.index, label=df.columns[i], marker = markers[i], markersize=7,color =palette[i])
+    ax = sns.lineplot(y=df.iloc[:,i],x=df.index, label=legendNames[i], marker = markers[i], markersize=7,color =palette[i])
     # ax = sns.lineplot(y=Y_,x=X_, label=df.columns[i], marker = markers[i], markersize=7,color =palette[i])
     # ax = sns.lineplot(y=Y_,x=X_, label=df.columns[i],color =palette[i])
     # ax = sns.regplot(data=df.iloc[:, i], label=df.columns[i])
@@ -42,13 +46,15 @@ yvals = ax.get_yticks()
 ax.set_yticklabels(['{:,.1%}'.format(x) for x in yvals])
 # xvals = ax.get_xticks()
 # ax.set_xticklabels(['{:,.1f}'.format(x) + 'K' for x in xvals])
-ax.tick_params(axis='both', which='major', labelsize=10)
+ax.tick_params(axis='both', which='major', labelsize=12)
 # ax.yaxis.set_major_formatter(mtick.PercentFormatter())
 # plt.legend(bbox_to_anchor=(1.1, 1.05))
 # ax.legend(loc='upper center', bbox_to_anchor=(0.5, 1.05),
 #           ncol=3, fancybox=True, shadow=True,prop={'size': 7},framealpha=0.5)
-ax.legend(loc='upper center', bbox_to_anchor=(0.48, 1.15),
-          ncol=3, fancybox=True, shadow=True, prop={'size': 9})
+ax.legend(loc='upper center', bbox_to_anchor=(0.42, 1.15),
+          ncol=3, fancybox=True, shadow=True, prop={'size': 11})
 
-plt.savefig('outputs/plots/' + 'regretWithNumberOfNodes'  +'.svg')
+now = datetime.now()
+date_time = now.strftime("%Y%m%d_%H%M%S")
+plt.savefig('outputs/plots/' + 'regretWithNumberOfNodes'  + date_time +'.svg')
 plt.show()

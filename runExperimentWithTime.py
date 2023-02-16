@@ -27,10 +27,12 @@ if __name__ == "__main__":
         for j in range(len(methods)):
             numTotalSamples = numSamplesToChoose[i]
             method = methods[j]
+            cgraph = CoveredGraph.__new__(CoveredGraph)
+            cgraph.__init__(degree=degree, numLayers=numLayers, initialQValues=initialQValues, mu=mu, epsilon=epsilon)
             regretMean, regretList = getAvgRegret(numExperimentsToAvgOver, method,
                                                   numTotalSamples, degree, numLayers,
                                                   initialQValues, mu, epsilon)
-            regretCompiled[i,j] = regretMean
+            regretCompiled[i,j] = regretMean/cgraph.regretOnChoosingBadIntervention
         print("regretCompiled[i]=", regretCompiled[i])
     print("regretCompiled=", regretCompiled)
 

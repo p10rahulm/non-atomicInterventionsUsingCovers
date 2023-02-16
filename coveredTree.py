@@ -59,6 +59,7 @@ class CoveredGraph:
         self.mu = mu
         self.epsilon = epsilon
         self.probOf1AtLeaves = initialQValues
+        self.regretOnChoosingBadIntervention = self.getRegretOnChoosingBadIntervention()
         self.leafQvals = np.ones(self.numLeaves) * self.probOf1AtLeaves
 
     def __repr__(self) -> str:
@@ -71,6 +72,7 @@ class CoveredGraph:
                f"\nnumPenultimate={self.numPenultimate}, mu={self.mu}, epsilon={self.epsilon}" \
                f"\nchosenInterventionSet={self.chosenInterventionSet}, " \
                f"chosenInterventionValues={self.chosenInterventionValues}" \
+               f"\nregretOnChoosingBadIntervention={self.regretOnChoosingBadIntervention}, " \
                f"\nleafQvals={self.leafQvals}), assignmentSet={self.assignmentSet})"
 
     def checkLeafIndex(self, k):
@@ -306,6 +308,18 @@ class CoveredGraph:
         sortedAssignments = sorted(assignments, key=sum)
         return sortedAssignments
 
+    def getExpectedRewardOnChoosingBadIntervention(self):
+        probOf1 = 1 - ((1 - self.mu) ** (self.numPenultimate) * (1 - self.probOf1AtLeaves ** 2) +
+                       (1 - self.mu) ** (self.numPenultimate - 1) * (1 - self.mu - self.epsilon) * (
+                               self.probOf1AtLeaves ** 2))
+        return probOf1
+
+    def getExpectedRewardOnChoosingGoodIntervention(self):
+        probOf1 = 1 - (1 - self.mu - self.epsilon) * (1 - self.mu) ** (self.numPenultimate - 1)
+        return probOf1
+
+    def getRegretOnChoosingBadIntervention(self):
+        return self.getExpectedRewardOnChoosingGoodIntervention() - self.getExpectedRewardOnChoosingBadIntervention()
 
     def getInterventionFromIndex(self, index):
         penultimateIndex = self.penultimateLayerStartIndex + index // (2 ** self.degree)

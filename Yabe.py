@@ -43,7 +43,8 @@ def getYabeRegret(cgraph, numTotalSamples):
     # print("avgRewardOnIntervention=", avgRewardOnIntervention)
     # print("np.argmax(avgRewardOnIntervention)=", np.argmax(avgRewardOnIntervention))
     # print("avgRewardOnIntervention.size=", avgRewardOnIntervention.size)
-    regret = 0 if np.argmax(avgRewardOnIntervention) == avgRewardOnIntervention.size-1 else cgraph.epsilon
+    # regret = 0 if np.argmax(avgRewardOnIntervention) == avgRewardOnIntervention.size-1 else cgraph.epsilon
+    regret = 0 if np.argmax(avgRewardOnIntervention) == avgRewardOnIntervention.size-1 else cgraph.regretOnChoosingBadIntervention
 
     return regret
 

@@ -32,7 +32,8 @@ def getCIRegret(cgraph, numTotalSamples):
     # print("avgRewardOnIntervention=", avgRewardOnIntervention)
     # print("np.argmax(avgRewardOnIntervention)=", np.argmax(avgRewardOnIntervention))
     # print("avgRewardOnIntervention.size=", avgRewardOnIntervention.size)
-    regret = 0 if np.argmax(avgRewardOnIntervention) == avgRewardOnIntervention.size-1 else cgraph.epsilon
+    # regret = 0 if np.argmax(avgRewardOnIntervention) == avgRewardOnIntervention.size-1 else cgraph.epsilon
+    regret = 0 if np.argmax(avgRewardOnIntervention) == avgRewardOnIntervention.size-1 else cgraph.regretOnChoosingBadIntervention
 
     return regret
 
@@ -44,8 +45,8 @@ if __name__ == "__main__":
     rd.seed(8)
     # cgraph = CoveredGraph.__new__(CoveredGraph)
     # cgraph.__init__(degree=3, numLayers=4, initialQValues=0.0,mu=0.05,epsilon=0.05)
-    degree, numLayers, initialQValues, mu, epsilon = 3, 3, 0, 0.1, 0.05
-    numTotalSamples = 2000
+    degree, numLayers, initialQValues, mu, epsilon = 3, 3, 0, 0.1, 0.2
+    numTotalSamples = 200
     numExperimentsToAvgOver = 50
     regretMean, regretList = getAvgRegret(numExperimentsToAvgOver, getCIRegret,
                                           numTotalSamples, degree, numLayers,

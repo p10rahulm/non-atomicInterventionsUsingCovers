@@ -28,7 +28,8 @@ def getPureBanditRegret(cgraph, numTotalSamples):
     # print("penultimateIndex=", penultimateIndex, "children=", childrenOfPenultimate, "assignment=", assignment,
     #       "assignmentIndex=", assignmentIndex, "avg reward=", avgRewardsList[maxIndex])
 
-    regret = 0 if (penultimateIndex == cgraph.penultimateLayerEndIndex and assignmentIndex == 2**cgraph.degree-1) else cgraph.epsilon
+    # regret = 0 if (penultimateIndex == cgraph.penultimateLayerEndIndex and assignmentIndex == 2**cgraph.degree-1) else cgraph.epsilon
+    regret = 0 if (penultimateIndex == cgraph.penultimateLayerEndIndex and assignmentIndex == 2**cgraph.degree-1) else cgraph.regretOnChoosingBadIntervention
     return regret
 
 def getPureBanditRegret2(cgraph, numTotalSamples):
@@ -61,7 +62,8 @@ def getPureBanditRegret2(cgraph, numTotalSamples):
     # print("penultimateIndex=", penultimateIndex, "children=", childrenOfPenultimate, "assignment=", assignment,
     #       "assignmentIndex=", assignmentIndex, "avg reward=", avgRewardsList[maxIndex])
 
-    regret = 0 if (penultimateIndex == cgraph.penultimateLayerEndIndex and assignmentIndex == 7) else cgraph.epsilon
+    # regret = 0 if (penultimateIndex == cgraph.penultimateLayerEndIndex and assignmentIndex == 7) else cgraph.epsilon
+    regret = 0 if (penultimateIndex == cgraph.penultimateLayerEndIndex and assignmentIndex == 7) else cgraph.regretOnChoosingBadIntervention
     return regret
 
 # We can also observe the Full graph to obtain results
@@ -95,7 +97,8 @@ def getPureBanditRegret3(cgraph, numTotalSamples):
     # print("penultimateIndex=", penultimateIndex, "children=", childrenOfPenultimate, "assignment=", assignment,
     #       "assignmentIndex=", assignmentIndex, "avg reward=", avgRewardsList[maxIndex])
 
-    regret = 0 if (penultimateIndex == cgraph.penultimateLayerEndIndex and assignmentIndex == 7) else cgraph.epsilon
+    # regret = 0 if (penultimateIndex == cgraph.penultimateLayerEndIndex and assignmentIndex == 7) else cgraph.epsilon
+    regret = 0 if (penultimateIndex == cgraph.penultimateLayerEndIndex and assignmentIndex == 7) else cgraph.regretOnChoosingBadIntervention
     return regret
 
 if __name__ == "__main__":

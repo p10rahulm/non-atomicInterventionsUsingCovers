@@ -18,9 +18,16 @@ if __name__ == "__main__":
     # methods = [getPureBanditRegret,getYabeRegret,getCIRegret]
     # methods = [getCIRegret]
 
-    methods, degree, mu, epsilon, initialQValues, numTotalSamples, listOfNumberOfLayers, numExperimentsToAvgOver = \
-        [getPureBanditRegret], 2, 0.2, 0.2, 0, 3.5e7, list(range(3, 8)), 100
+    # methods, degree, mu, epsilon, initialQValues, numTotalSamples, listOfNumberOfLayers, numExperimentsToAvgOver = \
+    #     [getPureBanditRegret], 2, 0.1, 0.2, 0, 1e6, list(range(3, 8)), 1000
+    degree, mu, epsilon, initialQValues, numExperimentsToAvgOver = 2, 0.1, 0.2, 0, 10000
+    listOfNumberOfLayers=list(range(3, 8))
+    methodsTuple = [(getPureBanditRegret,1e6,10000),(getYabeRegret,2500,1000),(getCIRegret,300,10000)]
+    # methodsTuple = [(getYabeRegret,2500,100)]
+    # methodsTuple = [(getCIRegret,300,1000)]
 
+
+    regretCompiled = np.zeros((len(listOfNumberOfLayers),len(methodsTuple)))
 
     # methods, degree, mu, epsilon, initialQValues, numTotalSamples, listOfNumberOfLayers, numExperimentsToAvgOver = \
     #     [getYabeRegret], 2, 0.2, 0.2, 0, 2500, list(range(3, 8)), 100
@@ -32,25 +39,27 @@ if __name__ == "__main__":
 
     # degree, mu, epsilon, methods, numTotalSamples = 2, 0.25, 0.125, [getCIRegret], 1000
     numNodes = set()
-    regretCompiled = np.zeros((len(listOfNumberOfLayers), len(methods)))
+    # regretCompiled = np.zeros((len(listOfNumberOfLayers), len(methods)))
     for i in range(len(listOfNumberOfLayers)):
-        for j in range(len(methods)):
-            numLayers = listOfNumberOfLayers[i]
+        numLayers = listOfNumberOfLayers[i]
+        for j in range(len(methodsTuple)):
+            method = methodsTuple[j][0]
+            numTotalSamples = methodsTuple[j][1]
+            numExperimentsToAvgOver = methodsTuple[j][2]
             cgraph = CoveredGraph.__new__(CoveredGraph)
             cgraph.__init__(degree=degree, numLayers=numLayers, initialQValues=initialQValues, mu=mu, epsilon=epsilon)
             numNodes.add(cgraph.numNodes)
-            method = methods[j]
             regretMean, regretList = getAvgRegret(numExperimentsToAvgOver, method,
                                                   numTotalSamples, degree, numLayers,
                                                   initialQValues, mu, epsilon)
-            regretCompiled[i, j] = regretMean
+            regretCompiled[i, j] = regretMean/cgraph.regretOnChoosingBadIntervention
         print("regretCompiled[i]=", regretCompiled[i])
 
     print("regretCompiled=", regretCompiled)
 
     # convert array into dataframe for saving
     dataFrame = pd.DataFrame(regretCompiled)
-    colNames = [(method.__name__).replace("get", "") for method in methods]
+    colNames = [(methodTuple[0].__name__).replace("get", "") for methodTuple in methodsTuple]
     dataFrame.columns = colNames
     dataFrame.index = sorted(list(numNodes))
     # save the dataframe as a csv file
