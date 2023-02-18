@@ -11,14 +11,14 @@ inputFilePath = "outputs/regretWithNumNodes_0.0pi0.05eps3degreeDirectExpRegretYa
 df = pd.read_csv(inputFilePath, index_col=0)
 df.columns = [name.replace("Regret","") for name in df.columns]
 print(df.columns)
-df.index = df.index/3
+df.index = df.index/3*(5)
 axes = []
 markers = ['^','h','o']
 palette  = sns.color_palette("muted")
 plt.figure(figsize=(6,4))
 # legendNames = ['UNIFORM EXPLORATION','PROPAGATING INFERENCE','COVERING INTERVENTIONS']
 # legendNames = ['UniformExploration','PropagatingInference','CoveringInterventions']
-legendNames = ['DirectExploration (T=30k)','PropInf (T=5k)','CoveringInterventions (T=100)']
+legendNames = ['DirectExploration (T=30k)','PropInf (T=5k)','CoveringInterventions (T=250)']
 # legendNames = ['DirectExploration','PropInf','CoveringInterventions']
 for i in range(len(df.columns)):
     y = df.iloc[:, i]
@@ -44,7 +44,7 @@ plt.ylabel('Simple Regret', fontsize=14)
 
 # manipulate ticks
 # ax.set_xlim(left=0,right=100000)
-ax.set_xlim(left=60,right=x.max())
+ax.set_xlim(left=x.min()-5,right=x.max())
 # ax.set_xlim(left=50,right=256)
 ax.set_ylim(bottom=0,top=0.05)
 yvals = ax.get_yticks()
@@ -63,4 +63,5 @@ ax.legend(loc='best', fancybox=True, shadow=True, prop={'size': 11})
 now = datetime.now()
 date_time = now.strftime("%Y%m%d_%H%M%S")
 plt.savefig('outputs/plots/' + 'regretWithNumberOfNodes'  + date_time +'.svg', format='svg', dpi=1200)
+# plt.savefig('outputs/plots/' + 'regretWithNumberOfNodes'  + date_time +'.png', format='png', dpi=1200)
 plt.show()

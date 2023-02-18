@@ -215,11 +215,28 @@ def sampleLeavesUniformly(numSamples,numInterventionsPerSet):
 
     return countOfChoicesOrderedArray
 
+
+def generateIntervention(numPenultimate,leaves,degree):
+
+    return
 def getCIRegret(numTotalSamples, numPenultimate, degree=3, pi=0.001, epsilon=0.05, probOf1AtLeaves=0):
+
+    numNodes = numPenultimate*(degree+2)
+    numI = int(3*degree*2**degree*(math.log2(numNodes) + 2*degree + math.log2(numNodes)))
+    numSamplesPerIntervention = numTotalSamples//numI
+    # print("numI=",numI,"numSamplesPerIntervention=",numSamplesPerIntervention)
+
+
     numInterventionSets = numPenultimate
     numInterventionsPerSet = (2 ** degree)
-    numInterventions = numInterventionSets * (2 ** degree)
-    numSamplesPerIntervention = numTotalSamples // numInterventions
+    # numInterventions = numInterventionSets * (2 ** degree)
+    # numSamplesPerIntervention = numTotalSamples // numInterventions
+    prob1Leaf = degree/(2*(1+degree))
+    prob0Leaf = 1 - prob1Leaf
+    probNoIntervention = 1- degree/(1+degree)
+
+
+
 
     numTimesSeen = np.zeros((numInterventionSets, numInterventionsPerSet), dtype=int)
     numTimesOne = np.zeros((numInterventionSets, numInterventionsPerSet), dtype=int)
@@ -234,10 +251,19 @@ def getCIRegret(numTotalSamples, numPenultimate, degree=3, pi=0.001, epsilon=0.0
     # print("probOfOneGoodIntervention=", round(probOfOneGoodIntervention, 4),
     #       "probOfOneBadIntervention=", round(probOfOneBadIntervention, 4),
     #       "regretForBadIntervention=", round(regretForBadIntervention, 4))
+    for intervention in range(numI):
+        # interventionArray = generateIntervention(numPenultimate,leaves,degree)
+        for penultimateIndex in range(numPenultimate):
+            isPenultimateNotIntervened = np.random.choice(np.arange(2), p=[1-probNoIntervention,probNoIntervention])
+            if(isPenultimateNotIntervened):
+                LeafInterventionChosen = np.random.choice(np.arange(4),p=[prob0Leaf**2, prob0Leaf*prob1Leaf,prob0Leaf*prob1Leaf,prob1Leaf**2])
+                numTimesSeen[penultimateIndex,LeafInterventionChosen] += numSamplesPerIntervention
 
-    for penultimateIndex in range(numInterventionSets):
-        numTimesSeen[penultimateIndex]=sampleLeavesUniformly(numTotalSamples,numInterventionsPerSet)
+    # print("numTimesSeen=",numTimesSeen)
 
+    # for penultimateIndex in range(numInterventionSets):
+    #     numTimesSeen[penultimateIndex]=sampleLeavesUniformly(numTotalSamples,numInterventionsPerSet)
+    # print("pi=",pi,"epsilon=",epsilon)
     for row in range(numInterventionSets):
         for col in range(numInterventionsPerSet):
             if row == numPenultimate - 1 and col == numInterventionsPerSet - 1:
@@ -245,8 +271,9 @@ def getCIRegret(numTotalSamples, numPenultimate, degree=3, pi=0.001, epsilon=0.0
             else:
                 numTimesOne[row, col] = np.random.binomial(n=numTimesSeen[row, col], p=pi)
 
-
     probOneEstimate = numTimesOne/numTimesSeen
+    # print("numTimesOne=", numTimesOne,"probOneEstimate=",probOneEstimate)
+
     # for row in range(numInterventionSets):
     #     for col in range(numInterventionsPerSet):
     #         probOneEstimate[row, col] = numTimesOne[row, col] / numTimesSeen[row, col]
@@ -296,14 +323,17 @@ if __name__ == "__main__":
     #     [getPureBanditRegret], 2, 0.1, 0.2, 0, 1e6, list(range(3, 8)), 1000
     # degree, pi, epsilon, initialQValues, numExperimentsToAvgOver = 2, 0.1, 0.2, 0, 10000
     # degree, pi, epsilon, initialQValues, numExperimentsToAvgOver = 2, 0.1, 0.2, 0, 10000
-    numExperimentsToAvgOver, degree, pi, epsilon, initialQValues = 1000, 3, 0.001, 0.05, 0
+    # USE BELOW
+    numExperimentsToAvgOver, degree, pi, epsilon, initialQValues = 1000, 2, 0.001, 0.05, 0
+    # numExperimentsToAvgOver, degree, pi, epsilon, initialQValues = 1000, 2, 0.01, 0.05, 0
     numPenultimateList = list(range(10, 51, 5))
+    # numPenultimateList = list(range(10, 11,5))
     # numPenultimateList = list(range(20, 21, 10))
     # methodsTuple = [(getDirectExpRegret, 3e4, 10000), (getYabeRegret, 5000, 1000), (getCIRegret, 100, 10000)]
     # methodsTuple = [(getDirectExpRegret, 3e4, 10000)]
     # methodsTuple = [(getYabeRegret, 5000, 1000)]
-    # methodsTuple = [(getCIRegret, 250, 1000)]
-    methodsTuple = [(getDirectExpRegret, 3e4, 10000), (getYabeRegret, 5000, 10000), (getCIRegret, 250, 10000)]
+    methodsTuple = [(getCIRegret, 500, 1000)]
+    # methodsTuple = [(getDirectExpRegret, 3e4, 10000), (getYabeRegret, 5000, 10000), (getCIRegret, 250, 10000)]
 
     regretCompiled = np.zeros((len(numPenultimateList), len(methodsTuple)))
     numNodes = set()

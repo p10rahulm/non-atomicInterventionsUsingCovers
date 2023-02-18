@@ -216,9 +216,7 @@ def sampleLeavesUniformly(numSamples,numInterventionsPerSet):
     return countOfChoicesOrderedArray
 
 
-def generateIntervention(numPenultimate,leaves,degree):
 
-    return
 def getCIRegret(numTotalSamples, numPenultimate, degree=3, pi=0.001, epsilon=0.05, probOf1AtLeaves=0):
 
     numNodes = numPenultimate*(degree+2)
