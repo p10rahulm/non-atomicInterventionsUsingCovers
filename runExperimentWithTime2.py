@@ -269,6 +269,7 @@ def getCIRegret(numTotalSamples, numPenultimate, degree=3, pi=0.001, epsilon=0.0
             else:
                 numTimesOne[row, col] = np.random.binomial(n=numTimesSeen[row, col], p=pi)
 
+    # print("numTimesOne=", numTimesOne)
     probOneEstimate = numTimesOne/numTimesSeen
     # print("numTimesOne=", numTimesOne,"probOneEstimate=",probOneEstimate)
 
@@ -322,39 +323,40 @@ if __name__ == "__main__":
     # degree, pi, epsilon, initialQValues, numExperimentsToAvgOver = 2, 0.1, 0.2, 0, 10000
     # degree, pi, epsilon, initialQValues, numExperimentsToAvgOver = 2, 0.1, 0.2, 0, 10000
     # USE BELOW
-    numExperimentsToAvgOver, degree, pi, epsilon, initialQValues = 1000, 2, 0.001, 0.05, 0
+    numExperimentsToAvgOver, degree, pi, epsilon, initialQValues = 1000, 3, 0.001, 0.05, 0
+    numExperimentsToAvgOver, degree, pi, epsilon, initialQValues = 100, 2, 0.001, 0.05, 0
+    numPenultimate = 64
     # numExperimentsToAvgOver, degree, pi, epsilon, initialQValues = 1000, 2, 0.01, 0.05, 0
-    numPenultimateList = list(range(10, 51, 5))
+    # numPenultimateList = list(range(10, 51, 5))
+
+    numSamplesToChoose = [500,1000,2000,3000,4000,5000,6000,7000,8000,9000,10000]
+    # numSamplesToChoose = [500]
+    # regretCompiled = np.zeros((len(numSamplesToChoose),len(methods)))
+
+
     # numPenultimateList = list(range(10, 11,5))
     # numPenultimateList = list(range(20, 21, 10))
     # methodsTuple = [(getDirectExpRegret, 3e4, 10000), (getYabeRegret, 5000, 1000), (getCIRegret, 100, 10000)]
     # methodsTuple = [(getDirectExpRegret, 3e4, 10000)]
     # methodsTuple = [(getYabeRegret, 5000, 1000)]
-    methodsTuple = [(getCIRegret, 500, 1000)]
-    # methodsTuple = [(getDirectExpRegret, 3e4, 10000), (getYabeRegret, 5000, 10000), (getCIRegret, 250, 10000)]
+    # methodsTuple = [(getCIRegret, 500, 1000)]
+    methodsTuple = [(getDirectExpRegret, 3e4, 10000), (getYabeRegret, 5000, 10000), (getCIRegret, 250, 10000)]
 
-    regretCompiled = np.zeros((len(numPenultimateList), len(methodsTuple)))
+    regretCompiled = np.zeros((len(numSamplesToChoose), len(methodsTuple)))
     numNodes = set()
-    for i in range(len(numPenultimateList)):
-        numPenultimate = numPenultimateList[i]
-        numNodes.add(numPenultimate * (degree+2))
-        probOfOneGoodIntervention = 1 - (1 - pi - epsilon) * (1 - pi) ** (numPenultimate - 1)
-        probOfOneBadIntervention = 1 - ((1 - pi) ** (numPenultimate) * (1 - initialQValues ** 2) +
-                                        (1 - pi) ** (numPenultimate - 1) * (1 - pi - epsilon) * (initialQValues ** 2))
-        regretForBadIntervention = probOfOneGoodIntervention - probOfOneBadIntervention
-
+    for i in range(len(numSamplesToChoose)):
+        numSamples = numSamplesToChoose[i]
         for j in range(len(methodsTuple)):
             methodTuple = methodsTuple[j]
             method = methodTuple[0]
-            numSamples = methodTuple[1]
-            numExperimentsToAvgOver = methodTuple[2]
+            # numExperimentsToAvgOver = numExperimentsToAvgOver
             regretMean, regretList = \
                 getAvgRegret(experimentFunction=method, numTotalSamples=numSamples,
                              numExperimentsToAvgOver=numExperimentsToAvgOver, numPenultimate=numPenultimate,
                              degree=degree, pi=pi, epsilon=epsilon, probOf1AtLeaves=initialQValues)
             regretCompiled[i, j] = regretMean
 
-        print("numPenultimate=", numPenultimate,"maxRegret=",regretForBadIntervention, "regretCompiled[i]=", regretCompiled[i])
+        print("numSamples=", numSamples, "regretCompiled[i]=", regretCompiled[i])
 
     print("regretCompiled=", regretCompiled)
 
@@ -362,7 +364,7 @@ if __name__ == "__main__":
     dataFrame = pd.DataFrame(regretCompiled)
     colNames = [(methodTuple[0].__name__).replace("get", "") for methodTuple in methodsTuple]
     dataFrame.columns = colNames
-    dataFrame.index = sorted(list(numNodes))
+    dataFrame.index = sorted(list(numSamplesToChoose))
     # save the dataframe as a csv file
     filePathToSave = 'outputs/regretWithNumNodes_' + str(round(pi, 2)) + 'pi' + str(epsilon) + 'eps' + \
                      str(degree) + 'degree' + ''.join(colNames) + '.csv'
