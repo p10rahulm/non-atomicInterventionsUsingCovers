@@ -22,8 +22,8 @@ if __name__ == "__main__":
     #     [getPureBanditRegret], 2, 0.1, 0.2, 0, 1e6, list(range(3, 8)), 1000
     # degree, pi, epsilon, initialQValues, numExperimentsToAvgOver = 2, 0.1, 0.2, 0, 10000
     # degree, pi, epsilon, initialQValues, numExperimentsToAvgOver = 2, 0.1, 0.2, 0, 10000
-    degree, pi, epsilon, initialQValues, numExperimentsToAvgOver = 2, 0.005, 0.05, 0, 10000
-    listOfNumberOfLayers=list(range(3, 8))
+    degree,height, pi, epsilon, initialQValues, numExperimentsToAvgOver = 2,3, 0.001, 0.05, 0, 10000
+    degrees=list(range(2, 9))
 
     # methodsTuple = [(getPureBanditRegret,1e6,10000),(getYabeRegret,2500,1000),(getCIRegret,300,10000)]
     # methodsTuple = [(getPureBanditRegret,1e6,20),(getYabeRegret,2500,20),(getCIRegret,300,20)]
@@ -33,9 +33,10 @@ if __name__ == "__main__":
     # methodsTuple = [(getYabeRegret,5000,100)]
     # methodsTuple = [(getCIRegret,100,1000)]
     methodsTuple = [(getPureBanditRegret,3e4,10000),(getYabeRegret,5000,1000),(getCIRegret,100,10000)]
+    methodsTuple = [(getPureBanditRegret,5e5,100)]
 
 
-    regretCompiled = np.zeros((len(listOfNumberOfLayers),len(methodsTuple)))
+    regretCompiled = np.zeros((len(degrees),len(methodsTuple)))
 
     # methods, degree, pi, epsilon, initialQValues, numTotalSamples, listOfNumberOfLayers, numExperimentsToAvgOver = \
     #     [getYabeRegret], 2, 0.2, 0.2, 0, 2500, list(range(3, 8)), 100
@@ -49,14 +50,14 @@ if __name__ == "__main__":
     numNodes = set()
     # regretCompiled = np.zeros((len(listOfNumberOfLayers), len(methods)))
     cgraph = CoveredGraph.__new__(CoveredGraph)
-    cgraph.__init__(degree=degree, numLayers=listOfNumberOfLayers[0], initialQValues=initialQValues, pi=pi,
+    cgraph.__init__(degree=degree, numLayers=height, initialQValues=initialQValues, pi=pi,
                     epsilon=epsilon)
-    for i in range(len(listOfNumberOfLayers)):
-        numLayers = listOfNumberOfLayers[i]
+    for i in range(len(degrees)):
+        degree = degrees[i]
         # pi = 0.01/cgraph.numNodes
         # print("pi=", pi)
         cgraph = CoveredGraph.__new__(CoveredGraph)
-        cgraph.__init__(degree=degree, numLayers=listOfNumberOfLayers[i], initialQValues=initialQValues, pi=pi,
+        cgraph.__init__(degree=degree, numLayers=height, initialQValues=initialQValues, pi=pi,
                         epsilon=epsilon)
         numNodes.add(cgraph.numNodes)
 
@@ -66,12 +67,12 @@ if __name__ == "__main__":
             numExperimentsToAvgOver = methodsTuple[j][2]
 
             regretMean, regretList = getAvgRegret(numExperimentsToAvgOver, method,
-                                                  numTotalSamples, degree, numLayers,
+                                                  numTotalSamples, degree, height,
                                                   initialQValues, pi, epsilon)
             # regretCompiled[i, j] = regretMean/cgraph.regretOnChoosingBadIntervention
             regretCompiled[i, j] = regretMean
         print("cgraph.regretOnChoosingBadIntervention=",cgraph.regretOnChoosingBadIntervention)
-        print("numLayers=",numLayers,"regretCompiled[i]=", regretCompiled[i])
+        print("degree=",degree,"regretCompiled[i]=", regretCompiled[i])
 
     print("regretCompiled=", regretCompiled)
 
@@ -81,7 +82,7 @@ if __name__ == "__main__":
     dataFrame.columns = colNames
     dataFrame.index = sorted(list(numNodes))
     # save the dataframe as a csv file
-    filePathToSave = 'outputs/regretWithNumLayers_' + str(round(pi,2)) + 'pi' + str(epsilon) + 'eps' + \
+    filePathToSave = 'outputs/regretWithDegree_' + str(round(pi,2)) + 'pi' + str(epsilon) + 'eps' + \
                      str(numTotalSamples) + 'obs' + ''.join(colNames) + '.csv'
     dataFrame.to_csv(filePathToSave)
 

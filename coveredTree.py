@@ -17,10 +17,10 @@ class CoveredGraph:
     #   1. each of the internal nodes which are not in the penultimate layer are simply sum variables
     #   AUTHOR COMMENT:
     #   Earlier we chose 'OR' for these variables, but in large networks, it almost always gives value 1 at the output.
-    #   2. all internal nodes (except the last) in the penultimate layer take value 1 with probability mu
+    #   2. all internal nodes (except the last) in the penultimate layer take value 1 with probability pi
     #   3. the last node in the penultimate layer takes value:
-    #       3a. 1 with probability mu + epsilon if all its parents are set to 1.
-    #       3b. 1 with probability mu otherwise.
+    #       3a. 1 with probability pi + epsilon if all its parents are set to 1.
+    #       3b. 1 with probability pi otherwise.
     #
     # The leaf nodes are boolean variables that take value 1 as per the q values
     #
@@ -36,7 +36,7 @@ class CoveredGraph:
         # print("1. Create a new instance of the graph.")
         return super().__new__(cls)
 
-    def __init__(self, degree, numLayers, initialQValues=0.01, mu=0.05, epsilon=0.1):
+    def __init__(self, degree, numLayers, initialQValues=0.01, pi=0.05, epsilon=0.1):
         # print("Initialize the new instance of graph.")
         self.degree = degree  # number of edges per node.
         self.numLayers = numLayers  # Root node is considered layer 1. So a 2 layer tree has only leaves and root
@@ -56,7 +56,7 @@ class CoveredGraph:
         self.chosenInterventionSet = self.getChildIndices(self.penultimateLayerEndIndex)
         self.chosenInterventionValues = [1]*self.degree
 
-        self.mu = mu
+        self.pi = pi
         self.epsilon = epsilon
         self.probOf1AtLeaves = initialQValues
         self.regretOnChoosingBadIntervention = self.getRegretOnChoosingBadIntervention()
@@ -69,7 +69,7 @@ class CoveredGraph:
                f"\npenultimateLayerStartIndex={self.penultimateLayerStartIndex}, " \
                f"penultimateLayerEndIndex={self.penultimateLayerEndIndex}, " \
                f"\nleafSet={self.leafSet}, penultimateLayerSet={self.penultimateLayerSet}, " \
-               f"\nnumPenultimate={self.numPenultimate}, mu={self.mu}, epsilon={self.epsilon}" \
+               f"\nnumPenultimate={self.numPenultimate}, pi={self.pi}, epsilon={self.epsilon}" \
                f"\nchosenInterventionSet={self.chosenInterventionSet}, " \
                f"chosenInterventionValues={self.chosenInterventionValues}" \
                f"\nregretOnChoosingBadIntervention={self.regretOnChoosingBadIntervention}, " \
@@ -123,12 +123,12 @@ class CoveredGraph:
                 if self.checkChosenParentPenultimate(currentIndex):
                     childIndices = self.getChildIndices(currentIndex)
                     if sampledVals[childIndices].sum() == self.degree:
-                        qVal = self.mu + self.epsilon
+                        qVal = self.pi + self.epsilon
                     else:
-                        qVal = self.mu
+                        qVal = self.pi
                     sampledVals[currentIndex] = randomBool(qVal)
                 else:
-                    qVal = self.mu
+                    qVal = self.pi
                     sampledVals[currentIndex] = randomBool(qVal)
             else:
                 childIndices = self.getChildIndices(currentIndex)
@@ -142,17 +142,17 @@ class CoveredGraph:
     def getRewardOnDoNothing(self):
         # Check if any of the last but 1 in the penultimate layer is 1, then return reward 1
         for i in range(self.numPenultimate - 1):
-            if randomBool(self.mu) == 1:
+            if randomBool(self.pi) == 1:
                 return 1
         # Check if all children of the last penultimate layer node is 1
         topBool = 1
         for i in range(self.degree):
-            if randomBool(self.mu) == 0:
+            if randomBool(self.pi) == 0:
                 topBool = 0
         if topBool:
-            return randomBool(self.mu + self.epsilon)
+            return randomBool(self.pi + self.epsilon)
         else:
-            return randomBool(self.mu)
+            return randomBool(self.pi)
 
     def doOperation(self, intervenedIndices, intervenedValues):
         for currentIndex in intervenedIndices:
@@ -179,12 +179,12 @@ class CoveredGraph:
                 if self.checkChosenParentPenultimate(currentIndex):
                     childIndices = self.getChildIndices(currentIndex)
                     if sampledVals[childIndices].sum() == self.degree:
-                        qVal = self.mu + self.epsilon
+                        qVal = self.pi + self.epsilon
                     else:
-                        qVal = self.mu
+                        qVal = self.pi
                     sampledVals[currentIndex] = randomBool(qVal)
                 else:
-                    qVal = self.mu
+                    qVal = self.pi
                     sampledVals[currentIndex] = randomBool(qVal)
             else:
                 childIndices = self.getChildIndices(currentIndex)
@@ -229,9 +229,9 @@ class CoveredGraph:
         for row in range(self.numPenultimate):
             for col in range(2**self.degree):
                 if row == self.numPenultimate-1 and col == 2**self.degree-1:
-                    numTimesOne[row, col] = np.random.binomial(n=numTimesSeen[row, col], p=self.mu+self.epsilon)
+                    numTimesOne[row, col] = np.random.binomial(n=numTimesSeen[row, col], p=self.pi+self.epsilon)
                 else:
-                    numTimesOne[row,col] = np.random.binomial(n=numTimesSeen[row,col], p=self.mu)
+                    numTimesOne[row,col] = np.random.binomial(n=numTimesSeen[row,col], p=self.pi)
 
         return numTimesSeen,numTimesOne
 
@@ -256,9 +256,9 @@ class CoveredGraph:
         for row in range(self.numPenultimate):
             for col in range(2**self.degree):
                 if row == self.numPenultimate-1 and col == 2**self.degree-1:
-                    numTimesOne[row, col] = np.random.binomial(n=numTimesSeen[row, col], p=self.mu+self.epsilon)
+                    numTimesOne[row, col] = np.random.binomial(n=numTimesSeen[row, col], p=self.pi+self.epsilon)
                 else:
-                    numTimesOne[row,col] = np.random.binomial(n=numTimesSeen[row,col], p=self.mu)
+                    numTimesOne[row,col] = np.random.binomial(n=numTimesSeen[row,col], p=self.pi)
 
         return numTimesSeen,numTimesOne
 
@@ -266,16 +266,16 @@ class CoveredGraph:
         if np.array_equal(intervenedIndices, self.chosenInterventionSet) and \
                 np.array_equal(intervenedValues, self.chosenInterventionValues):
             # If chosen intervention is done, and the boolean value is 1, then return 1
-            if randomBool(self.mu + self.epsilon):
+            if randomBool(self.pi + self.epsilon):
                 return 1
             # Or if any of the other values are randomly known to be 1, then return 1
             else:
-                if np.random.binomial(n=self.numPenultimate - 1, p=self.mu) > 0:
+                if np.random.binomial(n=self.numPenultimate - 1, p=self.pi) > 0:
                     return 1
 
         else:
             # But if chosen intervention is not 1, but any of the other booleans is randomly 1, then return 1
-            if np.random.binomial(n=self.numPenultimate, p=self.mu) > 0:
+            if np.random.binomial(n=self.numPenultimate, p=self.pi) > 0:
                 return 1
         # if none of the random values is 1, return 0
         return 0
@@ -285,15 +285,15 @@ class CoveredGraph:
                 np.array_equal(intervenedValues,self.chosenInterventionValues):
             # If chosen intervention is done:
             # Then prob of 1 is 1-prob of 0 = 1- prob that all penultimate nodes are 0
-            probOf1 = 1 - (1 - self.mu - self.epsilon) * (1 - self.mu) ** (self.numPenultimate - 1)
+            probOf1 = 1 - (1 - self.pi - self.epsilon) * (1 - self.pi) ** (self.numPenultimate - 1)
             num1s = np.random.binomial(n=numOps, p=probOf1)
             avg = num1s / numOps
             # print("num1s=", num1s, "avg=", avg)
         else:
             # But if chosen intervention is not the intervened one
             # Then prob of 1 is 1-prob of 0 = 1- prob that all penultimate nodes are 0
-            probOf1 = 1 - ((1 - self.mu) ** (self.numPenultimate) * (1 - self.probOf1AtLeaves ** 2) +
-                           (1 - self.mu) ** (self.numPenultimate - 1) * (1 - self.mu - self.epsilon) * (
+            probOf1 = 1 - ((1 - self.pi) ** (self.numPenultimate) * (1 - self.probOf1AtLeaves ** 2) +
+                           (1 - self.pi) ** (self.numPenultimate - 1) * (1 - self.pi - self.epsilon) * (
                                    self.probOf1AtLeaves ** 2))
 
             num1s = np.random.binomial(n=numOps, p=probOf1)
@@ -309,13 +309,13 @@ class CoveredGraph:
         return sortedAssignments
 
     def getExpectedRewardOnChoosingBadIntervention(self):
-        probOf1 = 1 - ((1 - self.mu) ** (self.numPenultimate) * (1 - self.probOf1AtLeaves ** 2) +
-                       (1 - self.mu) ** (self.numPenultimate - 1) * (1 - self.mu - self.epsilon) * (
+        probOf1 = 1 - ((1 - self.pi) ** (self.numPenultimate) * (1 - self.probOf1AtLeaves ** 2) +
+                       (1 - self.pi) ** (self.numPenultimate - 1) * (1 - self.pi - self.epsilon) * (
                                self.probOf1AtLeaves ** 2))
         return probOf1
 
     def getExpectedRewardOnChoosingGoodIntervention(self):
-        probOf1 = 1 - (1 - self.mu - self.epsilon) * (1 - self.mu) ** (self.numPenultimate - 1)
+        probOf1 = 1 - (1 - self.pi - self.epsilon) * (1 - self.pi) ** (self.numPenultimate - 1)
         return probOf1
 
     def getRegretOnChoosingBadIntervention(self):
@@ -336,7 +336,7 @@ if __name__ == "__main__":
     # np.set_printoptions(formatter={'float': '{: 0.3f}'.format})
     rd.seed(8)
     cgraph = CoveredGraph.__new__(CoveredGraph)
-    cgraph.__init__(degree=3, numLayers=4, initialQValues=0.0, mu=0.05, epsilon=0.05)
+    cgraph.__init__(degree=3, numLayers=4, initialQValues=0.0, pi=0.05, epsilon=0.05)
     print("cgraph=", cgraph)
     print("cgraph.numNodes=", cgraph.numNodes)
     for i in range(cgraph.numNodes):

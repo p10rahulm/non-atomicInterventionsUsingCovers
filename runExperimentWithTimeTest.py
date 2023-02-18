@@ -13,8 +13,8 @@ if __name__ == "__main__":
     np.set_printoptions(precision=3)
     rd.seed(8)
     # cgraph = CoveredGraph.__new__(CoveredGraph)
-    # cgraph.__init__(degree=3, numLayers=4, initialQValues=0.0,mu=0.05,epsilon=0.05)
-    degree, numLayers, initialQValues, mu, epsilon = 2, 3, 0, 0.1, 0.2
+    # cgraph.__init__(degree=3, numLayers=4, initialQValues=0.0,pi=0.05,epsilon=0.05)
+    degree, numLayers, initialQValues, pi, epsilon = 2, 3, 0, 0.1, 0.2
     # numTotalSamples = 2000
     numExperimentsToAvgOver = 50
     methods = [getPureBanditRegret,getYabeRegret,getCIRegret]
@@ -27,7 +27,7 @@ if __name__ == "__main__":
             method = methods[j]
             regretMean, regretList = getAvgRegret(numExperimentsToAvgOver, method,
                                                   numTotalSamples, degree, numLayers,
-                                                  initialQValues, mu, epsilon)
+                                                  initialQValues, pi, epsilon)
             regretCompiled[i,j] = regretMean
 
     print("regretCompiled=", regretCompiled)

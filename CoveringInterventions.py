@@ -44,13 +44,13 @@ if __name__ == "__main__":
     np.set_printoptions(precision=3)
     rd.seed(8)
     # cgraph = CoveredGraph.__new__(CoveredGraph)
-    # cgraph.__init__(degree=3, numLayers=4, initialQValues=0.0,mu=0.05,epsilon=0.05)
-    degree, numLayers, initialQValues, mu, epsilon = 3, 3, 0, 0.1, 0.2
+    # cgraph.__init__(degree=3, numLayers=4, initialQValues=0.0,pi=0.05,epsilon=0.05)
+    degree, numLayers, initialQValues, pi, epsilon = 3, 3, 0, 0.1, 0.2
     numTotalSamples = 200
     numExperimentsToAvgOver = 50
     regretMean, regretList = getAvgRegret(numExperimentsToAvgOver, getCIRegret,
                                           numTotalSamples, degree, numLayers,
-                                          initialQValues, mu, epsilon)
+                                          initialQValues, pi, epsilon)
 
     print("regretList=", regretList)
     print("regret=", regretMean)
@@ -58,7 +58,7 @@ if __name__ == "__main__":
     # regretList = np.zeros(numExperimentsToAvgOver)
     # for i in tqdm(range(numExperimentsToAvgOver)):
     #     # print("iterationNumber = ",i)
-    #     cgraph = CoveredGraph(degree=degree, numLayers=numLayers, initialQValues=initialQValues, mu=mu, epsilon=epsilon)
+    #     cgraph = CoveredGraph(degree=degree, numLayers=numLayers, initialQValues=initialQValues, pi=pi, epsilon=epsilon)
     #     regret = getCIRegret(cgraph, numTotalSamples)
     #     regretList[i] = regret
     # print("regretList=", regretList)

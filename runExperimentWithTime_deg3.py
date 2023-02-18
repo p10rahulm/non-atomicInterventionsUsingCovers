@@ -13,10 +13,10 @@ if __name__ == "__main__":
     np.set_printoptions(precision=3)
     rd.seed(8)
     # cgraph = CoveredGraph.__new__(CoveredGraph)
-    # cgraph.__init__(degree=3, numLayers=4, initialQValues=0.0,mu=0.05,epsilon=0.05)
-    # degree, numLayers, initialQValues, mu, epsilon = 3, 3, 0, 0.1, 0.05
-    degree, numLayers, initialQValues, mu, epsilon = 3, 3, 0, 0.2, 0.2
-    # degree, numLayers, initialQValues, mu, epsilon = 3, 6, 0, 0.1, 0.05
+    # cgraph.__init__(degree=3, numLayers=4, initialQValues=0.0,pi=0.05,epsilon=0.05)
+    # degree, numLayers, initialQValues, pi, epsilon = 3, 3, 0, 0.1, 0.05
+    degree, numLayers, initialQValues, pi, epsilon = 3, 3, 0, 0.2, 0.2
+    # degree, numLayers, initialQValues, pi, epsilon = 3, 6, 0, 0.1, 0.05
     # numTotalSamples = 2000
     numExperimentsToAvgOver = 1000
     methods = [getPureBanditRegret,getYabeRegret,getCIRegret]
@@ -29,7 +29,7 @@ if __name__ == "__main__":
             method = methods[j]
             regretMean, regretList = getAvgRegret(numExperimentsToAvgOver, method,
                                                   numTotalSamples, degree, numLayers,
-                                                  initialQValues, mu, epsilon)
+                                                  initialQValues, pi, epsilon)
             regretCompiled[i,j] = regretMean
         print("regretCompiled[i]=", regretCompiled[i])
     print("regretCompiled=", regretCompiled)
@@ -40,7 +40,7 @@ if __name__ == "__main__":
     dataFrame.columns = colNames
     dataFrame.index = numSamplesToChoose
     # save the dataframe as a csv file
-    filePathToSave = 'outputs/regretWithT_' + str(mu) + 'mu' + str(epsilon) + 'eps' + \
+    filePathToSave = 'outputs/regretWithT_' + str(pi) + 'pi' + str(epsilon) + 'eps' + \
                      str(numTotalSamples) + 'obs' + ''.join(colNames) + '.csv'
     dataFrame.to_csv(filePathToSave)
 

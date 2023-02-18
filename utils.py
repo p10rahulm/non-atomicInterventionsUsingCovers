@@ -9,7 +9,7 @@ def getAvgRegret(numExperimentsToAvgOver,experimentFunction, numTotalSamples,cGr
     regretList = np.zeros(numExperimentsToAvgOver)
     for i in tqdm(range(numExperimentsToAvgOver)):
         # print("iterationNumber = ",i)
-        cgraph = CoveredGraph(degree=cGraphDegree, numLayers=cGraphNumLayers, initialQValues=cGraphInitQVals, mu=cGraphMu, epsilon=cGraphEps)
+        cgraph = CoveredGraph(degree=cGraphDegree, numLayers=cGraphNumLayers, initialQValues=cGraphInitQVals, pi=cGraphMu, epsilon=cGraphEps)
         regret = experimentFunction(cgraph, numTotalSamples)
         regretList[i] = regret
     regretMean = regretList.mean()

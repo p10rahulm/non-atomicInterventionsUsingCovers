@@ -6,7 +6,7 @@ import numpy as np
 from datetime import datetime
 
 
-filePath = "outputs/regretWithT_0.1mu0.2eps3layersPureBanditRegretYabeRegretCIRegret.csv"
+filePath = "outputs/regretWithT_0.1pi0.2eps3layersPureBanditRegretYabeRegretCIRegret.csv"
 df = pd.read_csv(filePath, index_col=0)
 df.columns = [name.replace("Regret","") for name in df.columns]
 print(df.columns)

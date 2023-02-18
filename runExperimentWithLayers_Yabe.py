@@ -13,13 +13,13 @@ if __name__ == "__main__":
     np.set_printoptions(precision=3)
     rd.seed(8)
 
-    degree, numLayers, initialQValues, mu, epsilon = 2, 3, 0, 0.25, 0.125
+    degree, numLayers, initialQValues, pi, epsilon = 2, 3, 0, 0.25, 0.125
     # numTotalSamples = 2000
     numExperimentsToAvgOver = 50
     # methods = [getPureBanditRegret,getYabeRegret,getCIRegret]
     # methods = [getCIRegret]
-    degree, mu,epsilon, methods,numTotalSamples = 2, 0.25,0.125,[getYabeRegret],10000
-    # degree, mu,epsilon, methods,numTotalSamples = 2, 0.25,0.125,[getCIRegret],10000
+    degree, pi,epsilon, methods,numTotalSamples = 2, 0.25,0.125,[getYabeRegret],10000
+    # degree, pi,epsilon, methods,numTotalSamples = 2, 0.25,0.125,[getCIRegret],10000
 
     # listOfNumberOfLayers = list(range(3,11))
     listOfNumberOfLayers = list(range(3,8))
@@ -29,12 +29,12 @@ if __name__ == "__main__":
         for j in range(len(methods)):
             numLayers = listOfNumberOfLayers[i]
             cgraph = CoveredGraph.__new__(CoveredGraph)
-            cgraph.__init__(degree=degree, numLayers=numLayers, initialQValues=initialQValues, mu=mu, epsilon=epsilon)
+            cgraph.__init__(degree=degree, numLayers=numLayers, initialQValues=initialQValues, pi=pi, epsilon=epsilon)
             numNodes.add(cgraph.numNodes)
             method = methods[j]
             regretMean, regretList = getAvgRegret(numExperimentsToAvgOver, method,
                                                   numTotalSamples, degree, numLayers,
-                                                  initialQValues, mu, epsilon)
+                                                  initialQValues, pi, epsilon)
             regretCompiled[i,j] = regretMean
         print("regretCompiled[i]=",regretCompiled[i])
 
