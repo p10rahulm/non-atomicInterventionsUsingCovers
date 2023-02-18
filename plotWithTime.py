@@ -7,7 +7,7 @@ from datetime import datetime
 
 
 # filePath = "outputs/regretWithT_0.1pi0.2eps3layersPureBanditRegretYabeRegretCIRegret.csv"
-filePath = "outputs/regretWithT_0.005pi0.05eps3layersPureBanditRegretYabeRegretCIRegret.csv"
+filePath = "outputs/regretWithTime_0.0pi0.05eps2degreeDirectExpRegretYabeRegretCIRegret20230218_151619.csv"
 
 df = pd.read_csv(filePath, index_col=0)
 df.columns = [name.replace("Regret","") for name in df.columns]
@@ -59,5 +59,6 @@ ax.legend(loc='best', fancybox=True, shadow=True, prop={'size': 11})
 now = datetime.now()
 date_time = now.strftime("%Y%m%d_%H%M%S")
 
-plt.savefig('outputs/plots/' + 'regretWithTime' + date_time +'.svg', format='svg', dpi=1200)
+# plt.savefig('outputs/plots/' + 'regretWithTime' + date_time +'.svg', format='svg', dpi=1200)
+plt.savefig('outputs/plots/' + 'regretWithTime' + date_time +'.png', format='png')
 plt.show()

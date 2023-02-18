@@ -219,6 +219,8 @@ def sampleLeavesUniformly(numSamples,numInterventionsPerSet):
 def generateIntervention(numPenultimate,leaves,degree):
 
     return
+
+
 def getCIRegret(numTotalSamples, numPenultimate, degree=3, pi=0.001, epsilon=0.05, probOf1AtLeaves=0):
 
     numNodes = numPenultimate*(degree+2)
@@ -272,7 +274,8 @@ def getCIRegret(numTotalSamples, numPenultimate, degree=3, pi=0.001, epsilon=0.0
                 numTimesOne[row, col] = np.random.binomial(n=numTimesSeen[row, col], p=pi)
 
     probOneEstimate = numTimesOne/numTimesSeen
-    # print("numTimesOne=", numTimesOne,"probOneEstimate=",probOneEstimate)
+    # print("probOneEstimate=", probOneEstimate)
+    # print("numTimesSeen=", numTimesSeen,"numTimesOne=", numTimesOne,"probOneEstimate=",probOneEstimate)
 
     # for row in range(numInterventionSets):
     #     for col in range(numInterventionsPerSet):
@@ -288,7 +291,7 @@ def getCIRegret(numTotalSamples, numPenultimate, degree=3, pi=0.001, epsilon=0.0
                     prod = prod * (1 - probOneEstimate[penultimateIndex, 0])
 
             avgRewardEstimate[row, col] = 1 - prod
-
+    # print("avgRewardEstimate=", avgRewardEstimate)
     # print("avgRewardOnIntervention=", avgRewardOnIntervention)
     # print("np.argmax(avgRewardOnIntervention)=", np.argmax(avgRewardOnIntervention))
     # print("avgRewardOnIntervention.size=", avgRewardOnIntervention.size)
@@ -324,16 +327,16 @@ if __name__ == "__main__":
     # degree, pi, epsilon, initialQValues, numExperimentsToAvgOver = 2, 0.1, 0.2, 0, 10000
     # degree, pi, epsilon, initialQValues, numExperimentsToAvgOver = 2, 0.1, 0.2, 0, 10000
     # USE BELOW
-    numExperimentsToAvgOver, degree, pi, epsilon, initialQValues = 1000, 2, 0.001, 0.05, 0
-    # numExperimentsToAvgOver, degree, pi, epsilon, initialQValues = 1000, 2, 0.01, 0.05, 0
-    numPenultimateList = list(range(10, 51, 5))
-    # numPenultimateList = list(range(10, 11,5))
+    # numExperimentsToAvgOver, degree, pi, epsilon, initialQValues = 1000, 2, 0.001, 0.05, 0
+    numExperimentsToAvgOver, degree, pi, epsilon, initialQValues = 1, 2, 0.01, 0.05, 0
+    # numPenultimateList = list(range(10, 51, 5))
+    numPenultimateList = list(range(10, 100,20))
     # numPenultimateList = list(range(20, 21, 10))
     # methodsTuple = [(getDirectExpRegret, 3e4, 10000), (getYabeRegret, 5000, 1000), (getCIRegret, 100, 10000)]
     # methodsTuple = [(getDirectExpRegret, 3e4, 10000)]
     # methodsTuple = [(getYabeRegret, 5000, 1000)]
-    methodsTuple = [(getCIRegret, 500, 1000)]
-    # methodsTuple = [(getDirectExpRegret, 3e4, 10000), (getYabeRegret, 5000, 10000), (getCIRegret, 250, 10000)]
+    methodsTuple = [(getCIRegret, 1000, 100)]
+    # methodsTuple = [(getDirectExpRegret, 3e4, 10000), (getYabeRegret, 5000, 500), (getCIRegret, 1000, 500)]
 
     regretCompiled = np.zeros((len(numPenultimateList), len(methodsTuple)))
     numNodes = set()

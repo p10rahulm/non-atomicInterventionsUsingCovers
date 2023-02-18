@@ -7,7 +7,8 @@ from datetime import datetime
 
 # inputFilePath = "outputs/regretWithNodes.csv"
 # inputFilePath = "outputs/regretWithNumLayers_0.1pi0.2eps300obsPureBanditRegretYabeRegretCIRegret.csv"
-inputFilePath = "outputs/regretWithNumNodes_0.0pi0.05eps3degreeDirectExpRegretYabeRegretCIRegret.csv"
+# inputFilePath = "outputs/regretWithNumNodes_0.0pi0.05eps3degreeDirectExpRegretYabeRegretCIRegret.csv"
+inputFilePath = "outputs/regretWithNumNodes_0.0pi0.05eps2degreeDirectExpRegretYabeRegretCIRegret.csv"
 df = pd.read_csv(inputFilePath, index_col=0)
 df.columns = [name.replace("Regret","") for name in df.columns]
 print(df.columns)
