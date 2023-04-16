@@ -33,7 +33,8 @@ class CoveredGraph:
         self.cal_a_interventions_in_first_k_nodes = cal_a_interventions_in_first_k_nodes
         self.cal_a = self.get_cal_a
         self.unconditional_pr1_do_nothing, self.conditional_pr1_given_pa_do_nothing = self.computeProbOfOne
-        self.unconditional_pr1_for_cal_a, self.conditional_pr_parent_occurrence = self.probs_of_1_for_cal_a
+        self.unconditional_pr1_for_cal_a, self.conditional_pr_parent_occurrence = \
+            self.probs_of_1_for_cal_a(self.conditional_probs)
         self.expected_y_for_cal_a = self.get_expected_y_vals_for_cal_a
         self.best_intervention_index = np.argmax(self.expected_y_for_cal_a)
         self.best_intervention_expected_reward = self.expected_y_for_cal_a[self.best_intervention_index]
@@ -140,10 +141,9 @@ class CoveredGraph:
             prob_of_parent_combinations[combination_index] = multiplier
         return prob_of_parent_combinations
 
-    @property
-    def probs_of_1_for_cal_a(self):
+    def probs_of_1_for_cal_a(self, cond_probs):
         cal_a = self.cal_a
-        cond_probs = self.conditional_probs
+        # cond_probs = self.conditional_probs
         num_vertices = self.num_vertices
         given_graph = self.graph
         unconditional_pr1_for_cal_a = []
@@ -211,6 +211,14 @@ class Experiment:
             self.conditional_probs = self.graph.conditional_probs
             self.conditional_pr_parent_occurrence = self.graph.conditional_pr_parent_occurrence
             self.simulated_conditional_pr1_given_parents = self.simulate_conditional_prob_given_parents
+            self.unconditional_pr1_for_cal_a, self.conditional_pr_parent_occurrence = \
+                self.graph.probs_of_1_for_cal_a(self.simulated_conditional_pr1_given_parents)
+
+            self.simulated_y = np.array([elem[-1] for elem in self.unconditional_pr1_for_cal_a])
+            self.best_simulated_intervention_index = np.argmax(self.simulated_y)
+            self.expected_reward_of_chosen_intervention = self.expected_y_for_cal_a[
+                self.best_simulated_intervention_index]
+            self.expected_regret = self.best_intervention_expected_reward - self.expected_reward_of_chosen_intervention
 
     def __repr__(self) -> str:
         common_string = f"{type(self).__name__}(num_total_interventions={self.num_total_interventions}" \
@@ -220,19 +228,23 @@ class Experiment:
 
         if self.experiment_type == "direct_bandit":
             direct_bandit_str = f"\nprob_of_1={self.prob_of_1}" \
-                                f"\nsimulated_vertex_values={self.simulated_vertex_values}" \
-                                f"\nsimulated_y={self.simulated_y}" \
+                                f"\nsimulated_vertex_values={self.simulated_vertex_values}"
+            output_str =  f"\nsimulated_y={self.simulated_y}" \
                                 f"\nbest_simulated_intervention_index={self.best_simulated_intervention_index}" \
                                 f"\nexpected_reward_of_chosen_intervention={self.expected_reward_of_chosen_intervention}" \
                                 f"\nexpected_regret={self.expected_regret}"
-            return common_string + direct_bandit_str
+            return common_string + direct_bandit_str + output_str
         elif self.experiment_type == "yabe":
             yabe_str = f"\nconditional_pr_parent_occurrence={self.conditional_pr_parent_occurrence}" \
                        f"\nconditional_pr_parent_occurrence[0]={self.conditional_pr_parent_occurrence[0]}" \
                        f"\nconditional_probs={self.conditional_probs}" \
                        f"\nsimulated_conditional_pr1_given_parents={self.simulated_conditional_pr1_given_parents}"
+            output_str = f"\nsimulated_y={self.simulated_y}" \
+                                f"\nbest_simulated_intervention_index={self.best_simulated_intervention_index}" \
+                                f"\nexpected_reward_of_chosen_intervention={self.expected_reward_of_chosen_intervention}" \
+                                f"\nexpected_regret={self.expected_regret}"
 
-            return common_string + yabe_str
+            return common_string + yabe_str + output_str
         return common_string
 
     @property
@@ -268,7 +280,7 @@ class Experiment:
         num_1s = np.zeros((num_vertices, num_parent_combinations), dtype=int)
         for i in range(cal_a_size):
             interventions = dict(cal_a[i])
-            print("\ninterventions=", interventions)
+            # print("\ninterventions=", interventions)
             cond_pr_parent_occurrence = conditional_pr_parent_occurrence[i]
             num_trials_addition_table = np.zeros(cond_pr_parent_occurrence.shape, dtype=int)
             num_interventions = interventions_per_cal_a[i]
@@ -277,16 +289,17 @@ class Experiment:
                 if row not in interventions:
                     for col in range(cond_pr_parent_occurrence.shape[1]):
                         if ~np.isnan(cond_pr_parent_occurrence[row, col]):
-                            num_trials_addition_table[row, col] = num_interventions * cond_pr_parent_occurrence[row, col]
+                            num_trials_addition_table[row, col] = num_interventions * cond_pr_parent_occurrence[
+                                row, col]
                             num_1s_addition_table[row, col] = np.random.binomial(n=num_trials_addition_table[row, col],
                                                                                  p=conditional_probs[row, col])
             num_1s += num_1s_addition_table
             num_trials += num_trials_addition_table
-            print("\ncond_pr_parent_occurrence=", cond_pr_parent_occurrence,
-                  "\nnum_trials_addition_table=", num_trials_addition_table,
-                  "\nnum_trials=", num_trials,
-                  "\nnum_1s_addition_table=", num_1s_addition_table,
-                  "\nnum_1s=", num_1s)
+            # print("\ncond_pr_parent_occurrence=", cond_pr_parent_occurrence,
+            #       "\nnum_trials_addition_table=", num_trials_addition_table,
+            #       "\nnum_trials=", num_trials,
+            #       "\nnum_1s_addition_table=", num_1s_addition_table,
+            #       "\nnum_1s=", num_1s)
         with np.errstate(divide='ignore', invalid='ignore'):
             conditional_pr1_given_parents = num_1s / num_trials
         # print("conditional_pr1_given_parents=", conditional_pr1_given_parents)
