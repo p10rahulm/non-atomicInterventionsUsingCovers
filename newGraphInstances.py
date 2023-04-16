@@ -27,13 +27,13 @@ class CoveredGraph:
         # print("Initialize the new instance of graph.")
         self.graph, self.numOfParentsPerVertex = self.getGraph
         self.best_parent_of_y = self.getBestParentOfY
-        self.conditionalProbs = self.getConditionalProbs
+        self.conditional_probs = self.get_conditional_probs
         self.num_interventions_in_cal_a = num_interventions_in_cal_a
         self.size_of_intervention_in_cal_a = size_of_intervention_in_cal_a
         self.cal_a_interventions_in_first_k_nodes = cal_a_interventions_in_first_k_nodes
         self.cal_a = self.get_cal_a
         self.unconditional_pr1_do_nothing, self.conditional_pr1_given_pa_do_nothing = self.computeProbOfOne
-        self.unconditional_pr1_for_cal_a, self.conditional_pr1_given_pa_cal_a = self.probs_of_1_for_cal_a
+        self.unconditional_pr1_for_cal_a, self.conditional_pr_parent_occurrence = self.probs_of_1_for_cal_a
         self.expected_y_for_cal_a = self.get_expected_y_vals_for_cal_a
         self.best_intervention_index = np.argmax(self.expected_y_for_cal_a)
         self.best_intervention_expected_reward = self.expected_y_for_cal_a[self.best_intervention_index]
@@ -41,11 +41,11 @@ class CoveredGraph:
     def __repr__(self) -> str:
         return f"{type(self).__name__}(degree={self.degree}, num_vertices={self.num_vertices}, " \
                f"\ngraph={self.graph}\nnumOfParentsPerVertex={self.numOfParentsPerVertex}\n" \
-               f"\nconditionalProbsOfOne={self.conditionalProbs}\ncal_a={self.cal_a}" \
+               f"\nconditional_probsO=={self.conditional_probs}\ncal_a={self.cal_a}" \
                f"\nunconditional_pr1_do_nothing={self.unconditional_pr1_do_nothing}" \
                f"\nconditional_pr1_given_pa_do_nothing={self.conditional_pr1_given_pa_do_nothing}" \
                f"\nunconditional_pr1_for_cal_a={self.unconditional_pr1_for_cal_a}" \
-               f"\nconditional_pr1_given_pa_cal_a={self.conditional_pr1_given_pa_cal_a}" \
+               f"\nconditional_pr_parent_occurrence={self.conditional_pr_parent_occurrence}" \
                f"\nexpected_y_for_cal_a={self.expected_y_for_cal_a}" \
                f"\nself.best_intervention_index={self.best_intervention_index}" \
                f"\nself.best_intervention_expected_reward={self.best_intervention_expected_reward}"
@@ -71,7 +71,7 @@ class CoveredGraph:
         return best_parent_of_y
 
     @property
-    def getConditionalProbs(self):
+    def get_conditional_probs(self):
         max_degree = np.max(self.numOfParentsPerVertex)
         cond_probs = np.empty((self.num_vertices, 2 ** max_degree))
         cond_probs[:] = np.nan
@@ -106,7 +106,7 @@ class CoveredGraph:
 
     @property
     def computeProbOfOne(self):
-        cond_probs = self.conditionalProbs
+        cond_probs = self.conditional_probs
         num_vertices = self.num_vertices
         unconditional_probs_of_one = np.zeros(num_vertices)
         unconditional_probs_of_one[0] = cond_probs[0, 0]
@@ -143,11 +143,11 @@ class CoveredGraph:
     @property
     def probs_of_1_for_cal_a(self):
         cal_a = self.cal_a
-        cond_probs = self.conditionalProbs
+        cond_probs = self.conditional_probs
         num_vertices = self.num_vertices
         given_graph = self.graph
         unconditional_pr1_for_cal_a = []
-        conditional_pr1_given_pa_cal_a = []
+        conditional_pr_parent_occurrence = []
         for intervention in cal_a:
             dict_of_intervention = dict(intervention)
             unconditional_probs_of_one = np.zeros(num_vertices)
@@ -161,15 +161,16 @@ class CoveredGraph:
                 num_combos = 2 ** num_parents
                 unconditional_prob_pa = unconditional_probs_of_one[parents_of_i]
                 cond_probs_i = cond_probs[i, :num_combos]
-                prob_of_parent_combinations = self.get_prob_of_parent_combinations(unconditional_prob_pa, num_combos) \
-                    if i not in dict_of_intervention else np.ones(num_combos) * dict_of_intervention[i]
+                # prob_of_parent_combinations = self.get_prob_of_parent_combinations(unconditional_prob_pa, num_combos)\
+                #     if i not in dict_of_intervention else np.ones(num_combos) * dict_of_intervention[i]
+                prob_of_parent_combinations = self.get_prob_of_parent_combinations(unconditional_prob_pa, num_combos)
                 conditional_probs_given_parents[i, :num_combos] = prob_of_parent_combinations
                 computed_prob = cond_probs_i @ prob_of_parent_combinations
                 unconditional_probs_of_one[i] = dict_of_intervention[i] if i in dict_of_intervention else computed_prob
             unconditional_pr1_for_cal_a.append(unconditional_probs_of_one)
-            conditional_pr1_given_pa_cal_a.append(conditional_probs_given_parents)
+            conditional_pr_parent_occurrence.append(conditional_probs_given_parents)
 
-        return unconditional_pr1_for_cal_a, conditional_pr1_given_pa_cal_a
+        return unconditional_pr1_for_cal_a, conditional_pr_parent_occurrence
 
     @property
     def get_expected_y_vals_for_cal_a(self):
@@ -178,12 +179,15 @@ class CoveredGraph:
         return uncond_y
 
 
-class DirectBanditExperiment:
+class Experiment:
     def __new__(cls, *args, **kwargs):
         # print("1. Create a new instance of the graph.")
         return super().__new__(cls)
 
-    def __init__(self, input_graph=CoveredGraph(), num_total_interventions=1000):
+    def __init__(self, type="yabe",
+                 input_graph=CoveredGraph(),
+                 num_total_interventions=1000):
+        self.experiment_type = type
         self.num_total_interventions = num_total_interventions
         self.graph = input_graph
         self.num_vertices = self.graph.num_vertices
@@ -194,25 +198,42 @@ class DirectBanditExperiment:
         self.cal_a_size = len(self.cal_a)
         self.num_interventions_per_cal_a = self.num_total_interventions // self.cal_a_size
         self.interventions_per_cal_a = [self.num_interventions_per_cal_a] * self.cal_a_size
-        self.prob_of_1 = self.graph.unconditional_pr1_for_cal_a
-        self.conditional_pr1_given_pa_cal_a = self.graph.conditional_pr1_given_pa_cal_a
-        self.simulated_vertex_values = self.simulate_vertices
-        self.simulated_y = np.array([elem[-1] for elem in self.simulated_vertex_values])
-        self.best_simulated_intervention_index = np.argmax(self.simulated_y)
-        self.expected_reward_of_chosen_intervention = self.expected_y_for_cal_a[self.best_simulated_intervention_index]
-        self.expected_regret = self.best_intervention_expected_reward - self.expected_reward_of_chosen_intervention
+
+        if type == "direct_bandit":
+            self.prob_of_1 = self.graph.unconditional_pr1_for_cal_a
+            self.simulated_vertex_values = self.simulate_vertices
+            self.simulated_y = np.array([elem[-1] for elem in self.simulated_vertex_values])
+            self.best_simulated_intervention_index = np.argmax(self.simulated_y)
+            self.expected_reward_of_chosen_intervention = self.expected_y_for_cal_a[
+                self.best_simulated_intervention_index]
+            self.expected_regret = self.best_intervention_expected_reward - self.expected_reward_of_chosen_intervention
+        elif type == "yabe":
+            self.conditional_probs = self.graph.conditional_probs
+            self.conditional_pr_parent_occurrence = self.graph.conditional_pr_parent_occurrence
+            self.simulated_conditional_pr1_given_parents = self.simulate_conditional_prob_given_parents
 
     def __repr__(self) -> str:
-        return f"{type(self).__name__}(num_total_interventions={self.num_total_interventions}" \
-               f"\ngraph={self.graph}\ncal_a={self.cal_a}\n" \
-               f"\ncal_a_size={self.cal_a_size}\nnum_interventions_per_cal_a={self.num_interventions_per_cal_a}" \
-               f"\ninterventions_per_cal_a={self.interventions_per_cal_a}" \
-               f"\nprob_of_1={self.prob_of_1}" \
-               f"\nsimulated_vertex_values={self.simulated_vertex_values}" \
-               f"\nsimulated_y={self.simulated_y}" \
-               f"\nbest_simulated_intervention_index={self.best_simulated_intervention_index}" \
-               f"\nexpected_reward_of_chosen_intervention={self.expected_reward_of_chosen_intervention}" \
-               f"\nexpected_regret={self.expected_regret}"
+        common_string = f"{type(self).__name__}(num_total_interventions={self.num_total_interventions}" \
+                        f"\ncal_a={self.cal_a}\n" \
+                        f"\ncal_a_size={self.cal_a_size}\nnum_interventions_per_cal_a={self.num_interventions_per_cal_a}" \
+                        f"\ninterventions_per_cal_a={self.interventions_per_cal_a}"
+
+        if self.experiment_type == "direct_bandit":
+            direct_bandit_str = f"\nprob_of_1={self.prob_of_1}" \
+                                f"\nsimulated_vertex_values={self.simulated_vertex_values}" \
+                                f"\nsimulated_y={self.simulated_y}" \
+                                f"\nbest_simulated_intervention_index={self.best_simulated_intervention_index}" \
+                                f"\nexpected_reward_of_chosen_intervention={self.expected_reward_of_chosen_intervention}" \
+                                f"\nexpected_regret={self.expected_regret}"
+            return common_string + direct_bandit_str
+        elif self.experiment_type == "yabe":
+            yabe_str = f"\nconditional_pr_parent_occurrence={self.conditional_pr_parent_occurrence}" \
+                       f"\nconditional_pr_parent_occurrence[0]={self.conditional_pr_parent_occurrence[0]}" \
+                       f"\nconditional_probs={self.conditional_probs}" \
+                       f"\nsimulated_conditional_pr1_given_parents={self.simulated_conditional_pr1_given_parents}"
+
+            return common_string + yabe_str
+        return common_string
 
     @property
     def simulate_vertices(self):
@@ -234,63 +255,42 @@ class DirectBanditExperiment:
             pr1_in_cal_a_experiment.append(prob_1_for_intervention)
         return pr1_in_cal_a_experiment
 
-class YabeExperiment:
-    def __new__(cls, *args, **kwargs):
-        # print("1. Create a new instance of the graph.")
-        return super().__new__(cls)
-
-    def __init__(self, input_graph=CoveredGraph(), num_total_interventions=1000):
-        self.num_total_interventions = num_total_interventions
-        self.graph = input_graph
-        self.num_vertices = self.graph.num_vertices
-        self.expected_y_for_cal_a = self.graph.expected_y_for_cal_a
-        self.best_intervention_index = self.graph.best_intervention_index
-        self.best_intervention_expected_reward = self.graph.best_intervention_expected_reward
-        self.cal_a = self.graph.cal_a
-        self.cal_a_size = len(self.cal_a)
-        self.num_interventions_per_cal_a = self.num_total_interventions // self.cal_a_size
-        self.interventions_per_cal_a = [self.num_interventions_per_cal_a] * self.cal_a_size
-        self.prob_of_1 = self.graph.unconditional_pr1_for_cal_a
-        self.conditional_pr1_given_pa_cal_a = self.graph.conditional_pr1_given_pa_cal_a
-        self.simulated_vertex_values = self.simulate_vertices
-        self.simulated_y = np.array([elem[-1] for elem in self.simulated_vertex_values])
-        self.best_simulated_intervention_index = np.argmax(self.simulated_y)
-        self.expected_reward_of_chosen_intervention = self.expected_y_for_cal_a[self.best_simulated_intervention_index]
-        self.expected_regret = self.best_intervention_expected_reward - self.expected_reward_of_chosen_intervention
-
-    def __repr__(self) -> str:
-        return f"{type(self).__name__}(num_total_interventions={self.num_total_interventions}" \
-               f"\ngraph={self.graph}\ncal_a={self.cal_a}\n" \
-               f"\ncal_a_size={self.cal_a_size}\nnum_interventions_per_cal_a={self.num_interventions_per_cal_a}" \
-               f"\ninterventions_per_cal_a={self.interventions_per_cal_a}" \
-               f"\nprob_of_1={self.prob_of_1}" \
-               f"\nsimulated_vertex_values={self.simulated_vertex_values}" \
-               f"\nsimulated_y={self.simulated_y}" \
-               f"\nbest_simulated_intervention_index={self.best_simulated_intervention_index}" \
-               f"\nexpected_reward_of_chosen_intervention={self.expected_reward_of_chosen_intervention}" \
-               f"\nexpected_regret={self.expected_regret}"
-
     @property
-    def simulate_vertices(self):
-        pr1 = self.prob_of_1
+    def simulate_conditional_prob_given_parents(self):
+        conditional_pr_parent_occurrence = self.conditional_pr_parent_occurrence
+        cal_a = self.graph.cal_a
+        conditional_probs = self.conditional_probs
         interventions_per_cal_a = self.interventions_per_cal_a
         cal_a_size = self.cal_a_size
         num_vertices = self.num_vertices
-        pr1_in_cal_a_experiment = []
+        num_parent_combinations = 2 ** self.graph.degree
+        num_trials = np.zeros((num_vertices, num_parent_combinations), dtype=int)
+        num_1s = np.zeros((num_vertices, num_parent_combinations), dtype=int)
         for i in range(cal_a_size):
-            num1s = np.zeros(num_vertices)
-            num_trials_for_this_intervention = interventions_per_cal_a[i]
-            num_trials = np.ones(num_vertices) * num_trials_for_this_intervention
-            pr1_in_intervention = pr1[i]
-
-            for j in range(len(pr1_in_intervention)):
-                pi = pr1_in_intervention[j]
-                num1s[j] = np.random.binomial(n=num_trials_for_this_intervention, p=pi)
-            prob_1_for_intervention = num1s / num_trials
-            pr1_in_cal_a_experiment.append(prob_1_for_intervention)
-        return pr1_in_cal_a_experiment
-
-
+            interventions = dict(cal_a[i])
+            print("\ninterventions=", interventions)
+            cond_pr_parent_occurrence = conditional_pr_parent_occurrence[i]
+            num_trials_addition_table = np.zeros(cond_pr_parent_occurrence.shape, dtype=int)
+            num_interventions = interventions_per_cal_a[i]
+            num_1s_addition_table = np.zeros(cond_pr_parent_occurrence.shape, dtype=int)
+            for row in range(cond_pr_parent_occurrence.shape[0]):
+                if row not in interventions:
+                    for col in range(cond_pr_parent_occurrence.shape[1]):
+                        if ~np.isnan(cond_pr_parent_occurrence[row, col]):
+                            num_trials_addition_table[row, col] = num_interventions * cond_pr_parent_occurrence[row, col]
+                            num_1s_addition_table[row, col] = np.random.binomial(n=num_trials_addition_table[row, col],
+                                                                                 p=conditional_probs[row, col])
+            num_1s += num_1s_addition_table
+            num_trials += num_trials_addition_table
+            print("\ncond_pr_parent_occurrence=", cond_pr_parent_occurrence,
+                  "\nnum_trials_addition_table=", num_trials_addition_table,
+                  "\nnum_trials=", num_trials,
+                  "\nnum_1s_addition_table=", num_1s_addition_table,
+                  "\nnum_1s=", num_1s)
+        with np.errstate(divide='ignore', invalid='ignore'):
+            conditional_pr1_given_parents = num_1s / num_trials
+        # print("conditional_pr1_given_parents=", conditional_pr1_given_parents)
+        return conditional_pr1_given_parents
 
 
 if __name__ == "__main__":
@@ -302,7 +302,9 @@ if __name__ == "__main__":
 
     graph = CoveredGraph(15, 3)
     print("graph=", graph)
-    expt = DirectBanditExperiment()
-    print("expt=", expt)
+    expt1 = Experiment(type="direct_bandit", input_graph=graph, num_total_interventions=1000)
+    print("expt1=", expt1)
+    expt2 = Experiment(type="yabe", input_graph=graph, num_total_interventions=1000)
+    print("\n\n\nexpt2=", expt2)
 
     print("time taken=", time.time() - start_time)
