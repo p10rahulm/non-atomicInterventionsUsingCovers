@@ -1,3 +1,5 @@
+from typing import Tuple
+
 import numpy as np, scipy as sc, random as rd
 
 
@@ -6,26 +8,109 @@ class CoveredGraph:
         # print("1. Create a new instance of the graph.")
         return super().__new__(cls)
 
-    def __init__(self, num_vertices, degree, initialQValues=0.01, pi=0.05, epsilon=0.1):
-        self.numVertices = num_vertices
+    def __init__(self, num_vertices=15, degree=3, calA_size=10,
+                 possible_prob_choices=None, prob_choice_weights=None,
+                 best_parent_prob=0.99,
+                 num_interventions_in_calA=10, size_of_intervention_in_calA=3,
+                 initialQValues=0.01, pi=0.05, epsilon=0.1):
+        # Replacing mutable (list) defaults with values in the init function
+        if prob_choice_weights is None:
+            prob_choice_weights = [3, 3, 1]
+        if possible_prob_choices is None:
+            possible_prob_choices = [0.1, 0.9, 0]
+        self.num_vertices = num_vertices
         self.degree = degree
+        self.calA_size = calA_size
+        self.possible_prob_choices = possible_prob_choices
+        self.prob_choice_weights = prob_choice_weights
+        self.best_parent_prob = best_parent_prob
         # print("Initialize the new instance of graph.")
-        self.graph, self.numOfParentsPerVertex = self.generateGraph(num_vertices, degree)
+        self.graph, self.numOfParentsPerVertex = self.getGraph
+        self.best_parent_of_y = self.getBestParentOfY
+        self.conditionalProbs = self.getConditionalProbs
+        self.num_interventions_in_calA = num_interventions_in_calA
+        self.size_of_intervention_in_calA = size_of_intervention_in_calA
+        self.calA = self.get_cal_A
+        self.unconditionalProbs = self.computeProbOfOne
 
     def __repr__(self) -> str:
-        return f"{type(self).__name__}(degree={self.degree}, numVertices={self.numVertices}, " \
-               f"\ngraph={self.graph}\n numOfParentsPerVertex={self.numOfParentsPerVertex}"
+        return f"{type(self).__name__}(degree={self.degree}, num_vertices={self.num_vertices}, " \
+               f"\ngraph={self.graph}\n numOfParentsPerVertex={self.numOfParentsPerVertex}\n" \
+               f"\nconditionalProbsOfOne={self.conditionalProbs}\n calA={self.calA}\n" \
+               f"\nunconditionalProbs={self.unconditionalProbs}\n"
 
-    def generateGraph(self, num_vertices, degree):
-        g = np.ones((num_vertices, degree)) * -1
-        numOfParentsPerVertex = np.zeros(num_vertices)
+    @property
+    def getGraph(self):
+        my_graph = np.empty((self.num_vertices, self.degree))
+        my_graph[:] = np.nan
+        num_of_parents_per_vertex = np.zeros(self.num_vertices, dtype=int)
+        for i in range(1, self.num_vertices):
+            set_of_parents = sorted(list(set(rd.choices(range(i), k=self.degree))))
+            num_parents_i = len(set_of_parents)
+            num_of_parents_per_vertex[i] = num_parents_i
+            my_graph[i][:num_parents_i] = set_of_parents
+
+        return my_graph, num_of_parents_per_vertex
+
+    @property
+    def getBestParentOfY(self):
+        # best_parent_of_y = rd.choice(range(2 ** self.numOfParentsPerVertex[-1]))
+        # We can arbitrarily choose to set best parent as 0, the case where all parents are 0.
+        best_parent_of_y = 0
+        return best_parent_of_y
+
+    @property
+    def getConditionalProbs(self):
+        max_degree = np.max(self.numOfParentsPerVertex)
+        cond_probs = np.empty((self.num_vertices, 2 ** max_degree))
+        cond_probs[:] = np.nan
+        possible_prob_choices = self.possible_prob_choices
+        choice_weights = self.prob_choice_weights
+        for i in range(self.num_vertices):
+            num_parents = self.numOfParentsPerVertex[i]
+            num_parent_combinations = int(2 ** num_parents)
+            choice_list = list(rd.choices(population=possible_prob_choices, weights=choice_weights,
+                                          k=num_parent_combinations))
+            cond_probs[i, :num_parent_combinations] = [0] * num_parent_combinations
+            cond_probs[i][:num_parent_combinations] = choice_list
+        cond_probs[-1, self.best_parent_of_y] = self.best_parent_prob
+        return cond_probs
+
+    @property
+    # Say only  interventions are allowed
+    def get_cal_A(self):
+        num_interventions = self.num_interventions_in_calA
+        print("num_interventions=", num_interventions)
+        calA = []
+        for i in range(num_interventions):
+            chosen_nodes = rd.sample(range(self.num_vertices), self.size_of_intervention_in_calA)
+            A = []
+            for node in chosen_nodes:
+                value = rd.choice(range(2))
+                A.append((node, value))
+            calA.append(A)
+        return calA
+
+    @property
+    def computeProbOfOne(self):
+        cond_probs = self.conditionalProbs
+        num_vertices = self.num_vertices
+        unconditional_probs = np.zeros(num_vertices)
+        unconditional_probs[0] = cond_probs[0, 0]
+        conditional_probs_given_parents = np.copy(cond_probs)
+        given_graph = self.graph
         for i in range(1, num_vertices):
-            setOfParents = list(set(rd.choices(range(i), k=degree)))
-            numParentsI = len(setOfParents)
-            numOfParentsPerVertex[i] = numParentsI
-            g[i][:numParentsI] = setOfParents
+            parents_of_i = [int(elem) for elem in given_graph[i] if ~np.isnan(elem)]
+            unconditional_prob_parents = unconditional_probs[parents_of_i]
+            cond_probs_i = cond_probs[i]
+            print("i=", i, "parents", parents_of_i,
+                  "selected_unconditional_probs=", unconditional_prob_parents, "cond_probs_i=", cond_probs_i)
+            get_unconditional_probs_for_node(unconditional_prob_parents,cond_probs_i)
 
-        return g, numOfParentsPerVertex
+        return unconditional_probs
+
+
+    def get_unconditional_probs_for_node(self, unconditional_prob_parents,cond_probs_i):
 
 
 if __name__ == "__main__":
