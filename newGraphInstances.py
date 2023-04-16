@@ -101,16 +101,35 @@ class CoveredGraph:
         given_graph = self.graph
         for i in range(1, num_vertices):
             parents_of_i = [int(elem) for elem in given_graph[i] if ~np.isnan(elem)]
+            num_parents = len(parents_of_i)
+            num_combos = 2 ** num_parents
             unconditional_prob_parents = unconditional_probs[parents_of_i]
-            cond_probs_i = cond_probs[i]
-            print("i=", i, "parents", parents_of_i,
-                  "selected_unconditional_probs=", unconditional_prob_parents, "cond_probs_i=", cond_probs_i)
-            get_unconditional_probs_for_node(unconditional_prob_parents,cond_probs_i)
+            cond_probs_i = cond_probs[i, :num_combos]
+            prob_of_parent_combinations = self.get_prob_of_parent_combinations(unconditional_prob_parents, num_combos)
+            conditional_probs_given_parents[i, :num_combos] = prob_of_parent_combinations
+            unconditional_probs[i] = cond_probs_i @ prob_of_parent_combinations
+            print("\ni=", i, "parents", parents_of_i,
+                  "\nselected_unconditional_probs=", unconditional_prob_parents, "\ncond_probs_i=", cond_probs_i,
+                  "\nprob_of_parent_combinations=", prob_of_parent_combinations,
+                  "\nunconditional_probs[i]=", unconditional_probs[i])
 
         return unconditional_probs
 
+    @staticmethod
+    def get_prob_of_parent_combinations(unconditional_prob_parents, num_combinations):
+        prob1 = unconditional_prob_parents
+        prob0 = 1 - unconditional_prob_parents
+        prob_of_parent_combinations = np.zeros(num_combinations)
+        for combination_index in range(num_combinations):
+            choices_on_parents = [int(elem) for elem in list(bin(combination_index)[2:])]
+            multiplier = 1
+            for parent_i in range(len(choices_on_parents)):
+                multiplier_for_parent = prob1[parent_i] if choices_on_parents[parent_i] == 1 else prob0[parent_i]
+                multiplier *= multiplier_for_parent
+            prob_of_parent_combinations[combination_index] = multiplier
+        return prob_of_parent_combinations
 
-    def get_unconditional_probs_for_node(self, unconditional_prob_parents,cond_probs_i):
+        return 0
 
 
 if __name__ == "__main__":
