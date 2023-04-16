@@ -1,5 +1,6 @@
 import time
 import numpy as np, scipy as sc, random as rd
+from tqdm import tqdm
 
 
 class CoveredGraph:
@@ -11,8 +12,7 @@ class CoveredGraph:
                  possible_prob_choices=None, prob_choice_weights=None,
                  best_parent_prob=0.99,
                  num_interventions_in_cal_a=10, size_of_intervention_in_cal_a=3,
-                 cal_a_interventions_in_first_k_nodes=10,
-                 initialQValues=0.01, pi=0.05, epsilon=0.1):
+                 cal_a_interventions_in_first_k_nodes=10):
         # Replacing mutable (list) defaults with values in the init function
         if prob_choice_weights is None:
             prob_choice_weights = [3, 3, 1]
@@ -66,9 +66,9 @@ class CoveredGraph:
 
     @property
     def getBestParentOfY(self):
-        # best_parent_of_y = rd.choice(range(2 ** self.numOfParentsPerVertex[-1]))
+        best_parent_of_y = rd.choice(range(2 ** self.numOfParentsPerVertex[-1]))
         # We can arbitrarily choose to set best parent as 0, the case where all parents are 0.
-        best_parent_of_y = 0
+        # best_parent_of_y = 0
         return best_parent_of_y
 
     @property
@@ -89,7 +89,7 @@ class CoveredGraph:
         return cond_probs
 
     @property
-    # Say only  interventions are allowed
+    # Say only  interventions form cal_a are allowed
     def get_cal_a(self):
         num_interventions = self.num_interventions_in_cal_a
         vertices_to_choose_from = self.cal_a_interventions_in_first_k_nodes
@@ -229,10 +229,10 @@ class Experiment:
         if self.experiment_type == "direct_bandit":
             direct_bandit_str = f"\nprob_of_1={self.prob_of_1}" \
                                 f"\nsimulated_vertex_values={self.simulated_vertex_values}"
-            output_str =  f"\nsimulated_y={self.simulated_y}" \
-                                f"\nbest_simulated_intervention_index={self.best_simulated_intervention_index}" \
-                                f"\nexpected_reward_of_chosen_intervention={self.expected_reward_of_chosen_intervention}" \
-                                f"\nexpected_regret={self.expected_regret}"
+            output_str = f"\nsimulated_y={self.simulated_y}" \
+                         f"\nbest_simulated_intervention_index={self.best_simulated_intervention_index}" \
+                         f"\nexpected_reward_of_chosen_intervention={self.expected_reward_of_chosen_intervention}" \
+                         f"\nexpected_regret={self.expected_regret}"
             return common_string + direct_bandit_str + output_str
         elif self.experiment_type == "yabe":
             yabe_str = f"\nconditional_pr_parent_occurrence={self.conditional_pr_parent_occurrence}" \
@@ -240,9 +240,9 @@ class Experiment:
                        f"\nconditional_probs={self.conditional_probs}" \
                        f"\nsimulated_conditional_pr1_given_parents={self.simulated_conditional_pr1_given_parents}"
             output_str = f"\nsimulated_y={self.simulated_y}" \
-                                f"\nbest_simulated_intervention_index={self.best_simulated_intervention_index}" \
-                                f"\nexpected_reward_of_chosen_intervention={self.expected_reward_of_chosen_intervention}" \
-                                f"\nexpected_regret={self.expected_regret}"
+                         f"\nbest_simulated_intervention_index={self.best_simulated_intervention_index}" \
+                         f"\nexpected_reward_of_chosen_intervention={self.expected_reward_of_chosen_intervention}" \
+                         f"\nexpected_regret={self.expected_regret}"
 
             return common_string + yabe_str + output_str
         return common_string
@@ -313,11 +313,29 @@ if __name__ == "__main__":
     np.random.seed(9)
     np.set_printoptions(precision=4, suppress=True)
 
-    graph = CoveredGraph(15, 3)
+    graph = CoveredGraph(num_vertices=15, degree=3, cal_a_size=10,
+                         possible_prob_choices=[0.1, 0.9, 0], prob_choice_weights=[3, 3, 1],
+                         best_parent_prob=0.99,
+                         num_interventions_in_cal_a=10, size_of_intervention_in_cal_a=3,
+                         cal_a_interventions_in_first_k_nodes=10)
     print("graph=", graph)
-    expt1 = Experiment(type="direct_bandit", input_graph=graph, num_total_interventions=1000)
+    expt1 = Experiment(type="direct_bandit", input_graph=graph, num_total_interventions=500)
     print("expt1=", expt1)
-    expt2 = Experiment(type="yabe", input_graph=graph, num_total_interventions=1000)
+    expt2 = Experiment(type="yabe", input_graph=graph, num_total_interventions=250)
     print("\n\n\nexpt2=", expt2)
+
+    # Run a simulation with multiple experiments
+    regret = np.zeros(0)
+    for i in tqdm(range(500)):
+        expt = Experiment(type="yabe",
+                          input_graph=CoveredGraph(num_vertices=15, degree=3, cal_a_size=10,
+                                                   possible_prob_choices=[0.1, 0.9, 0], prob_choice_weights=[3, 3, 1],
+                                                   best_parent_prob=0.99,
+                                                   num_interventions_in_cal_a=10, size_of_intervention_in_cal_a=3,
+                                                   cal_a_interventions_in_first_k_nodes=10),
+                          num_total_interventions=250)
+        regret = np.append(regret, expt.expected_regret)
+    average_regret = np.mean(regret)
+    print("average_regret=", average_regret)
 
     print("time taken=", time.time() - start_time)
