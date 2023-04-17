@@ -147,6 +147,7 @@ class CausalBandit:
 
     @staticmethod
     def probs_of_1_for_cal_a(cond_probs, given_graph, cal_a, num_vertices):
+        # print("cond_probs=",cond_probs)
         unconditional_pr1_for_cal_a = []
         conditional_pr_parent_occurrence = []
         for intervention in cal_a:
@@ -162,13 +163,12 @@ class CausalBandit:
                 num_combos = 2 ** num_parents
                 unconditional_prob_pa = unconditional_probs_of_one[parents_of_i]
                 cond_probs_i = cond_probs[i, :num_combos]
-                # prob_of_parent_combinations = \
-                # CausalBandit.get_prob_of_parent_combinations(unconditional_prob_pa, num_combos)\
-                #     if i not in dict_of_intervention else np.ones(num_combos) * dict_of_intervention[i]
                 prob_of_parent_combinations = \
                     CausalBandit.get_prob_of_parent_combinations(unconditional_prob_pa, num_combos)
                 conditional_probs_given_parents[i, :num_combos] = prob_of_parent_combinations
                 computed_prob = cond_probs_i @ prob_of_parent_combinations
+                print("cond_probs_i=", cond_probs_i, "prob_of_parent_combinations=", prob_of_parent_combinations,
+                      "computed_prob=", computed_prob)
                 unconditional_probs_of_one[i] = dict_of_intervention[i] if i in dict_of_intervention else computed_prob
             unconditional_pr1_for_cal_a.append(unconditional_probs_of_one)
             conditional_pr_parent_occurrence.append(conditional_probs_given_parents)
@@ -287,7 +287,6 @@ class Experiment:
         num_1s = np.zeros((num_vertices, num_parent_combinations), dtype=int)
         for i in range(cal_a_size):
             interventions = dict(cal_a[i])
-            # print("\ninterventions=", interventions)
             cond_pr_parent_occurrence = conditional_pr_parent_occurrence[i]
             num_trials_addition_table = np.zeros(cond_pr_parent_occurrence.shape, dtype=int)
             num_interventions = interventions_per_cal_a[i]
@@ -302,14 +301,11 @@ class Experiment:
                                                                                  p=conditional_probs[row, col])
             num_1s += num_1s_addition_table
             num_trials += num_trials_addition_table
-            # print("\ncond_pr_parent_occurrence=", cond_pr_parent_occurrence,
-            #       "\nnum_trials_addition_table=", num_trials_addition_table,
-            #       "\nnum_trials=", num_trials,
-            #       "\nnum_1s_addition_table=", num_1s_addition_table,
-            #       "\nnum_1s=", num_1s)
+
         with np.errstate(divide='ignore', invalid='ignore'):
-            conditional_pr1_given_parents = num_1s / num_trials
-        # print("conditional_pr1_given_parents=", conditional_pr1_given_parents)
+            conditional_pr1_given_parents = np.divide(num_1s, num_trials,
+                                                      out=np.zeros(num_1s.shape, dtype=float), where=num_trials != 0)
+            conditional_pr1_given_parents[np.isnan(conditional_probs)] = np.nan
         return conditional_pr1_given_parents
 
     def get_covers(self, graph):
