@@ -53,9 +53,8 @@ class CausalBandit:
                f"\nself.best_intervention_index={self.best_intervention_index}" \
                f"\nself.best_intervention_expected_reward={self.best_intervention_expected_reward}"
 
-    '''
     @property
-    def getGraphOld(self):
+    def getGraph(self):
         my_graph = np.empty((self.num_vertices, self.degree))
         my_graph[:] = np.nan
         num_of_parents_per_vertex = np.zeros(self.num_vertices, dtype=int)
@@ -66,10 +65,10 @@ class CausalBandit:
             my_graph[i][:num_parents_i] = set_of_parents
 
         return my_graph, num_of_parents_per_vertex
-    '''
 
+    '''
     @property
-    def getGraph(self):
+    def getGraphOld(self):
         my_graph = np.empty((self.num_vertices, self.degree))
         my_graph[:] = np.nan
         num_of_parents_per_vertex = np.zeros(self.num_vertices, dtype=int)
@@ -89,6 +88,7 @@ class CausalBandit:
                 break
         # print("my_graph=", my_graph, "num_of_parents_per_vertex=", num_of_parents_per_vertex)
         return my_graph, num_of_parents_per_vertex
+    '''
 
     @property
     def getBestParentOfY(self):
@@ -114,7 +114,7 @@ class CausalBandit:
         cond_probs[-1, self.best_parent_of_y] = self.best_parent_prob
         return cond_probs
 
-    @property  # Say only  interventions form cal_a are allowed
+    @property  # Say only  interventions from cal_a are allowed
     def get_cal_a(self):
         num_interventions = self.num_interventions_in_cal_a
         vertices_to_choose_from = self.cal_a_interventions_in_first_k_nodes
@@ -131,22 +131,6 @@ class CausalBandit:
         return cal_a
 
     '''
-    @property  # Say only  interventions form cal_a are allowed
-    def get_cal_a_old(self):
-        num_interventions = self.num_interventions_in_cal_a
-        vertices_to_choose_from = self.cal_a_interventions_in_first_k_nodes
-        cal_a = []
-        # Add the do-nothing empty intervention
-        cal_a.append([])
-        for i in range(num_interventions):
-            chosen_nodes = sorted(rd.sample(range(vertices_to_choose_from), self.size_of_intervention_in_cal_a))
-            intervention_i = []
-            for node in chosen_nodes:
-                value = rd.choice(range(2))
-                intervention_i.append((node, value))
-            cal_a.append(intervention_i)
-        return cal_a
-
     
     @property
     def computeProbOfOne(self):

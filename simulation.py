@@ -105,7 +105,7 @@ if __name__ == "__main__":
                       experiment_variable="time",
                       exp_variable_choices=list(range(100, 1100, 100)) + list(range(1000, 11000, 1000)),
                       experiments_per_data_point=300,
-                      num_vertices=15, degree=3, cal_a_size=10,
+                      num_vertices=24, degree=4, cal_a_size=10,
                       possible_prob_choices=[0, 0.01, 0.05], prob_choice_weights=[6, 3, 1],
                       best_parent_prob=0.99,
                       num_interventions_in_cal_a=10, size_of_intervention_in_cal_a=3,
