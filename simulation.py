@@ -3,8 +3,10 @@ from causalBandit import CausalBandit
 import time
 import numpy as np
 import random as rd
-import statistics as stats
 from tqdm import tqdm
+import seaborn as sns
+import matplotlib.pyplot as plt
+from datetime import datetime
 
 
 class Simulation:
@@ -45,6 +47,9 @@ class Simulation:
         self.cal_a_interventions_in_first_k_nodes = cal_a_interventions_in_first_k_nodes
 
         self.experiment_values = self.run_simulation
+        Simulation.show_plot(self.experiment_values, exp_variable_choices,
+                             "Plot for Simple Regret with Time Horizon", "Time Horizon T", "Simple Regret",
+                             self.experiment_types, "outputs/")
 
     def __repr__(self) -> str:
         out_str = f"{type(self).__name__}(experiment_variable={self.experiment_variable}" \
@@ -72,6 +77,21 @@ class Simulation:
                     sim_results[var_index, experiment_type_index] += expt.expected_regret
         sim_results = sim_results / self.experiments_per_data_point
         return sim_results
+
+    @staticmethod
+    def show_plot(sim_results, x_labels, plot_title, x_axis_label, y_axis_label, legend, location):
+        plt.figure(figsize=(6, 4))
+        for i in range(sim_results.shape[1]):
+            y_values = sim_results[:, i]
+            x_values = x_labels
+            ax = sns.lineplot(y=y_values, x=x_values, label=legend[i])
+        plt.xlabel(x_axis_label, fontsize=14)
+        plt.ylabel(y_axis_label, fontsize=14)
+        plt.title(plot_title, fontsize=14)
+        now = datetime.now()
+        date_time = now.strftime("%Y%m%d_%H%M%S")
+        plt.savefig(location + 'regretWithTime_' + date_time + '.png', format='png')
+        plt.show()
 
 
 if __name__ == "__main__":
