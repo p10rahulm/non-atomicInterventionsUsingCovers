@@ -3,7 +3,7 @@ import numpy as np, scipy as sc, random as rd
 from tqdm import tqdm
 
 
-class CoveredGraph:
+class CausalBandit:
     def __new__(cls, *args, **kwargs):
         # print("1. Create a new instance of the graph.")
         return super().__new__(cls)
@@ -32,10 +32,12 @@ class CoveredGraph:
         self.size_of_intervention_in_cal_a = size_of_intervention_in_cal_a
         self.cal_a_interventions_in_first_k_nodes = cal_a_interventions_in_first_k_nodes
         self.cal_a = self.get_cal_a
-        self.unconditional_pr1_do_nothing, self.conditional_pr1_given_pa_do_nothing = self.computeProbOfOne
+        # self.unconditional_pr1_do_nothing, self.conditional_pr1_given_pa_do_nothing = self.computeProbOfOne
+        [self.unconditional_pr1_do_nothing], [self.conditional_pr1_given_pa_do_nothing] = \
+            CausalBandit.probs_of_1_for_cal_a(self.conditional_probs, self.graph, [[]], self.num_vertices)
         self.unconditional_pr1_for_cal_a, self.conditional_pr_parent_occurrence = \
-            self.probs_of_1_for_cal_a(self.conditional_probs)
-        self.expected_y_for_cal_a = self.get_expected_y_vals_for_cal_a
+            CausalBandit.probs_of_1_for_cal_a(self.conditional_probs, self.graph, self.cal_a, self.num_vertices)
+        self.expected_y_for_cal_a = CausalBandit.get_expected_y_vals_for_cal_a(self.unconditional_pr1_for_cal_a)
         self.best_intervention_index = np.argmax(self.expected_y_for_cal_a)
         self.best_intervention_expected_reward = self.expected_y_for_cal_a[self.best_intervention_index]
 
@@ -105,6 +107,7 @@ class CoveredGraph:
             cal_a.append(intervention_i)
         return cal_a
 
+    '''
     @property
     def computeProbOfOne(self):
         cond_probs = self.conditional_probs
@@ -119,10 +122,11 @@ class CoveredGraph:
             num_combos = 2 ** num_parents
             unconditional_prob_parents = unconditional_probs_of_one[parents_of_i]
             cond_probs_i = cond_probs[i, :num_combos]
-            prob_of_parent_combinations = self.get_prob_of_parent_combinations(unconditional_prob_parents, num_combos)
+            prob_of_parent_combinations = CausalBandit.get_prob_of_parent_combinations(unconditional_prob_parents, num_combos)
             conditional_probs_given_parents[i, :num_combos] = prob_of_parent_combinations
             unconditional_probs_of_one[i] = cond_probs_i @ prob_of_parent_combinations
         return unconditional_probs_of_one, conditional_probs_given_parents
+    '''
 
     @staticmethod
     def get_prob_of_parent_combinations(unconditional_prob_parents, num_combinations):
@@ -141,11 +145,8 @@ class CoveredGraph:
             prob_of_parent_combinations[combination_index] = multiplier
         return prob_of_parent_combinations
 
-    def probs_of_1_for_cal_a(self, cond_probs):
-        cal_a = self.cal_a
-        # cond_probs = self.conditional_probs
-        num_vertices = self.num_vertices
-        given_graph = self.graph
+    @staticmethod
+    def probs_of_1_for_cal_a(cond_probs, given_graph, cal_a, num_vertices):
         unconditional_pr1_for_cal_a = []
         conditional_pr_parent_occurrence = []
         for intervention in cal_a:
@@ -161,9 +162,11 @@ class CoveredGraph:
                 num_combos = 2 ** num_parents
                 unconditional_prob_pa = unconditional_probs_of_one[parents_of_i]
                 cond_probs_i = cond_probs[i, :num_combos]
-                # prob_of_parent_combinations = self.get_prob_of_parent_combinations(unconditional_prob_pa, num_combos)\
+                # prob_of_parent_combinations = \
+                # CausalBandit.get_prob_of_parent_combinations(unconditional_prob_pa, num_combos)\
                 #     if i not in dict_of_intervention else np.ones(num_combos) * dict_of_intervention[i]
-                prob_of_parent_combinations = self.get_prob_of_parent_combinations(unconditional_prob_pa, num_combos)
+                prob_of_parent_combinations = \
+                    CausalBandit.get_prob_of_parent_combinations(unconditional_prob_pa, num_combos)
                 conditional_probs_given_parents[i, :num_combos] = prob_of_parent_combinations
                 computed_prob = cond_probs_i @ prob_of_parent_combinations
                 unconditional_probs_of_one[i] = dict_of_intervention[i] if i in dict_of_intervention else computed_prob
@@ -172,11 +175,11 @@ class CoveredGraph:
 
         return unconditional_pr1_for_cal_a, conditional_pr_parent_occurrence
 
-    @property
-    def get_expected_y_vals_for_cal_a(self):
-        uncond_pr1 = self.unconditional_pr1_for_cal_a
-        uncond_y = np.array([elem[-1] for elem in uncond_pr1])
-        return uncond_y
+    @staticmethod
+    def get_expected_y_vals_for_cal_a(unconditional_probs_for_all_vertices_cal_a):
+        unconditional_pr1 = unconditional_probs_for_all_vertices_cal_a
+        unconditional_y = np.array([elem[-1] for elem in unconditional_pr1])
+        return unconditional_y
 
 
 class Experiment:
@@ -184,37 +187,39 @@ class Experiment:
         # print("1. Create a new instance of the graph.")
         return super().__new__(cls)
 
-    def __init__(self, type="yabe",
-                 input_graph=CoveredGraph(),
+    def __init__(self, experiment_type="yabe",
+                 input_causal_bandit=CausalBandit(),
                  num_total_interventions=1000):
-        self.experiment_type = type
+        self.experiment_type = experiment_type
         self.num_total_interventions = num_total_interventions
-        self.graph = input_graph
-        self.num_vertices = self.graph.num_vertices
-        self.expected_y_for_cal_a = self.graph.expected_y_for_cal_a
-        self.best_intervention_index = self.graph.best_intervention_index
-        self.best_intervention_expected_reward = self.graph.best_intervention_expected_reward
-        self.cal_a = self.graph.cal_a
+        self.causal_bandit = input_causal_bandit
+        self.graph = self.causal_bandit.graph
+        self.num_vertices = self.causal_bandit.num_vertices
+        self.expected_y_for_cal_a = self.causal_bandit.expected_y_for_cal_a
+        self.best_intervention_index = self.causal_bandit.best_intervention_index
+        self.best_intervention_expected_reward = self.causal_bandit.best_intervention_expected_reward
+        self.cal_a = self.causal_bandit.cal_a
         self.cal_a_size = len(self.cal_a)
         self.num_interventions_per_cal_a = self.num_total_interventions // self.cal_a_size
         self.interventions_per_cal_a = [self.num_interventions_per_cal_a] * self.cal_a_size
 
-        if type == "direct_bandit":
-            self.prob_of_1 = self.graph.unconditional_pr1_for_cal_a
+        if experiment_type == "direct_bandit":
+            self.prob_of_1 = self.causal_bandit.unconditional_pr1_for_cal_a
             self.simulated_vertex_values = self.simulate_vertices
             self.simulated_y = np.array([elem[-1] for elem in self.simulated_vertex_values])
             self.best_simulated_intervention_index = np.argmax(self.simulated_y)
             self.expected_reward_of_chosen_intervention = self.expected_y_for_cal_a[
                 self.best_simulated_intervention_index]
             self.expected_regret = self.best_intervention_expected_reward - self.expected_reward_of_chosen_intervention
-        elif type == "yabe":
-            self.conditional_probs = self.graph.conditional_probs
-            self.conditional_pr_parent_occurrence = self.graph.conditional_pr_parent_occurrence
+        elif experiment_type == "yabe":
+            self.conditional_probs = self.causal_bandit.conditional_probs
+            self.conditional_pr_parent_occurrence = self.causal_bandit.conditional_pr_parent_occurrence
             self.simulated_conditional_pr1_given_parents = self.simulate_conditional_prob_given_parents
-            self.unconditional_pr1_for_cal_a, self.conditional_pr_parent_occurrence = \
-                self.graph.probs_of_1_for_cal_a(self.simulated_conditional_pr1_given_parents)
+            self.simulated_expected_vertex_values, self.simulated_cond_pr_parent_occurrence = \
+                CausalBandit.probs_of_1_for_cal_a(self.simulated_conditional_pr1_given_parents,
+                                                  self.graph, self.cal_a, self.num_vertices)
 
-            self.simulated_y = np.array([elem[-1] for elem in self.unconditional_pr1_for_cal_a])
+            self.simulated_y = np.array([elem[-1] for elem in self.simulated_expected_vertex_values])
             self.best_simulated_intervention_index = np.argmax(self.simulated_y)
             self.expected_reward_of_chosen_intervention = self.expected_y_for_cal_a[
                 self.best_simulated_intervention_index]
@@ -223,7 +228,8 @@ class Experiment:
     def __repr__(self) -> str:
         common_string = f"{type(self).__name__}(num_total_interventions={self.num_total_interventions}" \
                         f"\ncal_a={self.cal_a}\n" \
-                        f"\ncal_a_size={self.cal_a_size}\nnum_interventions_per_cal_a={self.num_interventions_per_cal_a}" \
+                        f"\ncal_a_size={self.cal_a_size}" \
+                        f"\nnum_interventions_per_cal_a={self.num_interventions_per_cal_a}" \
                         f"\ninterventions_per_cal_a={self.interventions_per_cal_a}"
 
         if self.experiment_type == "direct_bandit":
@@ -235,10 +241,11 @@ class Experiment:
                          f"\nexpected_regret={self.expected_regret}"
             return common_string + direct_bandit_str + output_str
         elif self.experiment_type == "yabe":
-            yabe_str = f"\nconditional_pr_parent_occurrence={self.conditional_pr_parent_occurrence}" \
-                       f"\nconditional_pr_parent_occurrence[0]={self.conditional_pr_parent_occurrence[0]}" \
+            yabe_str = f"\nsimulated_cond_pr_parent_occurrence={self.simulated_cond_pr_parent_occurrence}" \
+                       f"\nsimulated_cond_pr_parent_occurrence[0]={self.simulated_cond_pr_parent_occurrence[0]}" \
                        f"\nconditional_probs={self.conditional_probs}" \
-                       f"\nsimulated_conditional_pr1_given_parents={self.simulated_conditional_pr1_given_parents}"
+                       f"\nsimulated_conditional_pr1_given_parents={self.simulated_conditional_pr1_given_parents}" \
+                       f"\nsimulated_expected_vertex_values={self.simulated_expected_vertex_values}"
             output_str = f"\nsimulated_y={self.simulated_y}" \
                          f"\nbest_simulated_intervention_index={self.best_simulated_intervention_index}" \
                          f"\nexpected_reward_of_chosen_intervention={self.expected_reward_of_chosen_intervention}" \
@@ -270,12 +277,12 @@ class Experiment:
     @property
     def simulate_conditional_prob_given_parents(self):
         conditional_pr_parent_occurrence = self.conditional_pr_parent_occurrence
-        cal_a = self.graph.cal_a
+        cal_a = self.causal_bandit.cal_a
         conditional_probs = self.conditional_probs
         interventions_per_cal_a = self.interventions_per_cal_a
         cal_a_size = self.cal_a_size
         num_vertices = self.num_vertices
-        num_parent_combinations = 2 ** self.graph.degree
+        num_parent_combinations = 2 ** self.causal_bandit.degree
         num_trials = np.zeros((num_vertices, num_parent_combinations), dtype=int)
         num_1s = np.zeros((num_vertices, num_parent_combinations), dtype=int)
         for i in range(cal_a_size):
@@ -305,6 +312,9 @@ class Experiment:
         # print("conditional_pr1_given_parents=", conditional_pr1_given_parents)
         return conditional_pr1_given_parents
 
+    def get_covers(self, graph):
+        return
+
 
 if __name__ == "__main__":
     # record time taken
@@ -313,29 +323,30 @@ if __name__ == "__main__":
     np.random.seed(9)
     np.set_printoptions(precision=4, suppress=True)
 
-    graph = CoveredGraph(num_vertices=15, degree=3, cal_a_size=10,
-                         possible_prob_choices=[0.1, 0.9, 0], prob_choice_weights=[3, 3, 1],
-                         best_parent_prob=0.99,
-                         num_interventions_in_cal_a=10, size_of_intervention_in_cal_a=3,
-                         cal_a_interventions_in_first_k_nodes=10)
-    print("graph=", graph)
-    expt1 = Experiment(type="direct_bandit", input_graph=graph, num_total_interventions=500)
+    causal_bandit = CausalBandit(num_vertices=15, degree=3, cal_a_size=10,
+                                 possible_prob_choices=[0.1, 0.9, 0], prob_choice_weights=[3, 3, 1],
+                                 best_parent_prob=0.99,
+                                 num_interventions_in_cal_a=10, size_of_intervention_in_cal_a=3,
+                                 cal_a_interventions_in_first_k_nodes=10)
+    print("graph=", causal_bandit)
+    expt1 = Experiment(experiment_type="direct_bandit", input_causal_bandit=causal_bandit, num_total_interventions=500)
     print("expt1=", expt1)
-    expt2 = Experiment(type="yabe", input_graph=graph, num_total_interventions=250)
+    expt2 = Experiment(experiment_type="yabe", input_causal_bandit=causal_bandit, num_total_interventions=250)
     print("\n\n\nexpt2=", expt2)
 
     # Run a simulation with multiple experiments
-    regret = np.zeros(0)
-    for i in tqdm(range(500)):
-        expt = Experiment(type="yabe",
-                          input_graph=CoveredGraph(num_vertices=15, degree=3, cal_a_size=10,
-                                                   possible_prob_choices=[0.1, 0.9, 0], prob_choice_weights=[3, 3, 1],
-                                                   best_parent_prob=0.99,
-                                                   num_interventions_in_cal_a=10, size_of_intervention_in_cal_a=3,
-                                                   cal_a_interventions_in_first_k_nodes=10),
-                          num_total_interventions=250)
-        regret = np.append(regret, expt.expected_regret)
-    average_regret = np.mean(regret)
-    print("average_regret=", average_regret)
+    # regret = np.zeros(0)
+    # num_simulations = 5
+    # for i in tqdm(range(num_simulations)):
+    #     expt = Experiment(experiment_type="yabe",
+    #                       input_causal_bandit=CausalBandit(num_vertices=15, degree=3, cal_a_size=10,
+    #                                                possible_prob_choices=[0.1, 0.9, 0], prob_choice_weights=[3, 3, 1],
+    #                                                best_parent_prob=0.99,
+    #                                                num_interventions_in_cal_a=10, size_of_intervention_in_cal_a=3,
+    #                                                cal_a_interventions_in_first_k_nodes=10),
+    #                       num_total_interventions=250)
+    #     regret = np.append(regret, expt.expected_regret)
+    # average_regret = np.mean(regret)
+    # print("average_regret=", average_regret)
 
     print("time taken=", time.time() - start_time)
